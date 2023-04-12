@@ -1,0 +1,6 @@
+[submodule "src/pioneer3at_demo"]
+	path = src/pioneer3at_demo
+	url = git@github.com:melihocakci/pioneer3at_demo.git
+[submodule "src/hector_nist_arenas_gazebo"]
+	path = src/hector_nist_arenas_gazebo
+	url = git@github.com:melihocakci/hector_nist_arenas_gazebo.git
