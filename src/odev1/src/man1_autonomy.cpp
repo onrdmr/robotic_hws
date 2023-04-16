@@ -5,19 +5,40 @@
 ros::Publisher cmd_vel_pub;
 geometry_msgs::Twist cmd_vel;
 
+
+// localisation is need for track trajectory we draw for localized lidar data
+
+// gerekenler 
+// 1. Prediction Model (olabilecek olası path e ait değerler alınır:)
+
+// 2. Cost function (düz gitmesi için belirleyici olan )
+
+// 3. Prediction horizon
+
+// 4. Terminal Constraints 
+
+void bruteForceLogic(const sensor_msgs::LaserScan::ConstPtr& laser) 
+{
+	
+}
+
 void laserCallBack(const sensor_msgs::LaserScan::ConstPtr& laser){
 	//ASAGIDA BULUNAN IF KOMUTU ORNEK OLARAK VERILMISTIR. SIZIN BURAYI DEGISTIRMENIZ BEKLENMEKTEDIR
 	//BURDAN SONRASINI DEGISTIR
-	if(laser->ranges[540] > 1.0){		//Lazerin tam orda noktasındaki olcum (540. indis) 1 metreden fazlaysa
-		cmd_vel.linear.x = 0.25;		//cizgisel hiz 0.25 m/s olsun
-		cmd_vel.angular.z = 0.0;		//acisal hiz 0.0 radyan/s olsun
-	}else{								//fazla degilse
-		cmd_vel.linear.x = 0.0;			//cizgisel hiz 0.0 m/s olsun
-		cmd_vel.angular.z = 0.25;		//acisal hiz 0.25 radyan/s olsun
-	}
-	//BURDAN SONRASINA DOKUNMA
 
-	cmd_vel_pub.publish(cmd_vel);
+	
+	bruteForceLogic(laser);
+
+	// if(laser->ranges[540] > 1.0){		//Lazerin tam orda noktasındaki olcum (540. indis) 1 metreden fazlaysa
+	// 	cmd_vel.linear.x = 0.25;		//cizgisel hiz 0.25 m/s olsun
+	// 	cmd_vel.angular.z = 0.0;		//acisal hiz 0.0 radyan/s olsun
+	// }else{								//fazla degilse
+	// 	cmd_vel.linear.x = 0.0;			//cizgisel hiz 0.0 m/s olsun
+	// 	cmd_vel.angular.z = 0.25;		//acisal hiz 0.25 radyan/s olsun
+	// }
+	// //BURDAN SONRASINA DOKUNMA
+
+	// cmd_vel_pub.publish(cmd_vel);
 }
 
 int main(int argc, char **argv){
