@@ -22,6 +22,15 @@ object_loc = None
 Proximity = None
 obsLocate = None
 
+init_trans_x=0.011008159263360684
+init_trans_y=-5.156497392615714
+init_trans_z=0.011008159263360684
+
+init_rot_x=4.553158104623501e-06
+init_rot_y=8.128222477999093e-06
+init_rot_z=-3.3588706412369306e-06
+
+
 msg = """
 Manual Keyboard Control For robot
 ---------------------------
@@ -37,13 +46,38 @@ CTRL-C to quit
 """
 
 
+class Movement :
+	def __init__(self):
+		rospy.init_node('move_robot_node', anonymous=False)
+		self.pub_move = rospy.Publisher("/rtg/cmd_vel", Twist, queue_size=10)
+		self.move = Twist()
+	def publish_vel(self):
+		self.pub_move.publish(self.move)
+	def move_forward(self):
+		self.move.linear.x=100
+		self.move.angular.z=0.0
+	def angular_right(self):
+		self.move.angular.x = 10
+		# self.move.angular.z = 1
+	def move_backward(self):      
+		self.move.linear.x=-1
+		self.move.angular.z=0.0
+
+	def stop(self):        
+		self.move.linear.x=0
+		self.move.angular.z=0.0  
+
 ### Function to identify and locate obstacles around the robot
 def laserCallBack(data):
+	twist = Twist()
 	ranges = np.array(data.ranges)
 	global Proximity
 	global obsLocate
 	Proximity = min(ranges)
 	obsLocate = np.where(ranges == Proximity)
+
+	twist.linear.x = 1
+
 
 def getKey():
 	tty.setraw(sys.stdin.fileno())
@@ -69,23 +103,6 @@ def makeSimpleProfile(output, input, slop):
 
 	return output
 
-def constrain(input, low, high):
-	if input < low:
-	  input = low
-	elif input > high:
-	  input = high
-	else:
-	  input = input
-
-	return input
-
-def checkLinearLimitVelocity(vel):
-	vel = constrain(vel, -BURGER_MAX_LIN_VEL, BURGER_MAX_LIN_VEL)
-	return vel
-
-def checkAngularLimitVelocity(vel):
-	vel = constrain(vel, -BURGER_MAX_ANG_VEL, BURGER_MAX_ANG_VEL)
-	return vel
 
 
 ### Function to identify exact location of obstacles relative to the robot
@@ -108,91 +125,92 @@ def locateObstacle(ran):
 
 	return object_loc
 
+
+
 if __name__=="__main__":
 	settings = termios.tcgetattr(sys.stdin)
 
-	rospy.init_node('teleop_node')
-	pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
-	sub = rospy.Subscriber("scan", LaserScan,laserCallBack)
-	turtlebot3_model = rospy.get_param("model", "burger")
+	# rospy.init_node('teleop_node')
+	# pub = rospy.Publisher('/rtg/cmd_vel', Twist, queue_size=10)
+	# sub = rospy.Subscriber("/rtg/hokuyo", LaserScan, laserCallBack)
+	# # turtlebot3_model = rospy.get_param("model", "burger")
+	
 
-	status = 0
-	target_linear_vel   = 0.0
-	target_angular_vel  = 0.0
-	control_linear_vel  = 0.0
-	control_angular_vel = 0.0
+	# status = 0
+	# target_linear_vel   = 0.0
+	# target_angular_vel  = 0.0
+	# control_linear_vel  = 0.0
+	# control_angular_vel = 0.0
 
-	try:
-		print(msg)
-		while(1):
-			key = getKey()
-			if key == 'w' :
-				target_linear_vel = checkLinearLimitVelocity(target_linear_vel + LIN_VEL_STEP_SIZE)
-				status = status + 1
-				print()
-				print(vels(target_linear_vel,target_angular_vel))
-				print()				
-				print("The distance to the closest obstacle is ",Proximity)
-				locateObstacle(obsLocate)
-				print()
+	mov = Movement()
+	rate = rospy.Rate(1)
 
-			elif key == 'x' :
-				target_linear_vel = checkLinearLimitVelocity(target_linear_vel - LIN_VEL_STEP_SIZE)
-				status = status + 1
-				print()
-				print(vels(target_linear_vel,target_angular_vel))
-				print()
-				print("The distance to the closest obstacle is ",Proximity)
-				locateObstacle(obsLocate)
-				print()
+	while not rospy.is_shutdown() :
 
-			elif key == 'd' :
-				target_angular_vel = checkAngularLimitVelocity(target_angular_vel + ANG_VEL_STEP_SIZE)
-				status = status + 1
-				print(vels(target_linear_vel,target_angular_vel))
-				print()
-				print("The distance to the closest obstacle is ",Proximity)
-				print()
-				locateObstacle(obsLocate)
-				print()
+		# movement = input('Enter desired movement: ')
+		movement = None
+		if movement == 'forward':
+			mov.move_forward()
 
-			elif key == 'a' :
-				target_angular_vel = checkAngularLimitVelocity(target_angular_vel - ANG_VEL_STEP_SIZE)
-				status = status + 1
-				print()
-				print(vels(target_linear_vel,target_angular_vel))				
-				print()
-				print("The distance to the closest obstacle is ",Proximity)
-				print()
-				locateObstacle(obsLocate)
-				print()
+		if movement == 'backward':
+			mov.move_backward()
 
-			elif key == ' ' or key == 's' :
-				target_linear_vel   = 0.0
-				control_linear_vel  = 0.0
-				target_angular_vel  = 0.0
-				control_angular_vel = 0.0
-				print()
-				print(vels(target_linear_vel, target_angular_vel))
-				print()
-				print("The distance to the closest obstacle is ",Proximity)
-				print()
-				locateObstacle(obsLocate)
-				print()
+		if movement == 'right':
+			mov.angular_right()
 
-			else:
-				if (key == '\x03'):
-					break
+		if movement == 'stop':
+			mov.stop()
+		mov.publish_vel()
+		rate.sleep()
 
-			twist = Twist()
+	# Todos : 
 
-			control_linear_vel = makeSimpleProfile(control_linear_vel, target_linear_vel, (LIN_VEL_STEP_SIZE/2.0))
-			twist.linear.x = control_linear_vel; twist.linear.y = 0.0; twist.linear.z = 0.0
+	# conditions to debug
+	# hızlanmayı yavaştan hızlı yapamak gerekli
 
-			control_angular_vel = makeSimpleProfile(control_angular_vel, target_angular_vel, (ANG_VEL_STEP_SIZE/2.0))
-			twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = control_angular_vel
+	# 1: take snapshot of laser scan
+	# 2: mapping for acceleration (set next yaw and velocity) -- this will be extended
+	# 3: reset robot position yaw pitch roll to initial position
 
-			pub.publish(twist)
+	# try:
+	# 	print(msg)
+	# 	twist = Twist()
+	# 	while(1):
+	# 		key = getKey()
+	# 		if key == 'w' :
+	# 			# target_linear_vel = checkLinearLimitVelocity(target_linear_vel + LIN_VEL_STEP_SIZE)
+	# 			# status = status + 1
+	# 			print()
+	# 			print(vels(1.1, 1.0))
+	# 			print()				
+	# 			# print("The distance to the closest obstacle is ",Proximity)
+	# 			# locateObstacle(obsLocate)
+	# 			twist.linear.x = 1.1
+	# 			twist.cmd_vel.linear.y = 1.0
+	# 			# twist.cmd_vel.linear.z = 0.0;
+	# 			twist.cmd_vel.angular.x = 0.0
+	# 			twist.cmd_vel.angular.y = 0.0
+				
+	# 			print()
+	# 		if key == 's':
+	# 			twist.cmd_vel.linear.x = 0.0
+	# 			twist.cmd_vel.linear.y = 0.0
+	# 			# twist.cmd_vel.linear.z = 0.0;
+	# 			twist.cmd_vel.angular.x = 0.0
+	# 			twist.cmd_vel.angular.y = 0.0
+				
+	# 		else:
+	# 			if (key == '\x03'):
+	# 				break
 
-	except:
-		print("Node not parsed with the bot, failed to communicate with the environment")
+
+	# 		control_linear_vel = makeSimpleProfile(control_linear_vel, target_linear_vel, (LIN_VEL_STEP_SIZE/2.0))
+	# 		twist.linear.x = control_linear_vel; twist.linear.y = 0.0; twist.linear.z = 0.0
+
+	# 		control_angular_vel = makeSimpleProfile(control_angular_vel, target_angular_vel, (ANG_VEL_STEP_SIZE/2.0))
+	# 		twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = control_angular_vel
+
+	# 		pub.publish(twist)
+
+	# except:
+	# 	print("Node not parsed with the bot, failed to communicate with the environment")

@@ -30,7 +30,7 @@ int main(int argc, char **argv){
 
 	ros::Subscriber odom_sub = nh.subscribe("/rtg/odom", 1000, odomCallBack);
 	trajectory_pub = nh.advertise<visualization_msgs::Marker>("/trajectory", 1000);
-
+ 
 	ros::spin();
 
 	return 0;
