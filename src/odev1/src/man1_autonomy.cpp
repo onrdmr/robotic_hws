@@ -19,7 +19,7 @@ geometry_msgs::Twist cmd_vel;
 
 void bruteForceLogic(const sensor_msgs::LaserScan::ConstPtr& laser)
 {
-    static const int directions[]{ 420, 460, 500, 540, 600, 640, 680 };
+    static const int directions[]{ 340, 380, 420, 460, 500, 540, 600, 640, 680, 720, 760 };
 
     int maxDirection = directions[0];
     int minDirection = directions[0];
@@ -35,16 +35,16 @@ void bruteForceLogic(const sensor_msgs::LaserScan::ConstPtr& laser)
     }
 
     if (laser->ranges[maxDirection] < 1.0) {
-        cmd_vel.linear.x = 0.0;
-        cmd_vel.angular.z = 0.50;
+        cmd_vel.linear.x = 0.00;
+        cmd_vel.angular.z = 1.00;
     }
-    else if (laser->ranges[minDirection] < 1.0) {
-        cmd_vel.linear.x = 0.20;
-        cmd_vel.angular.z = 0.50 * ((540 - minDirection) / (directions[1] - directions[0]));
+    else if (laser->ranges[minDirection] < 0.5) {
+        cmd_vel.linear.x = 0.30;
+        cmd_vel.angular.z = 0.60 * ((540 - minDirection) / (directions[1] - directions[0]));
     }
     else {
-        cmd_vel.linear.x = 0.20;
-        cmd_vel.angular.z = 0.50 * ((maxDirection - 540) / (directions[1] - directions[0]));
+        cmd_vel.linear.x = 1.00;
+        cmd_vel.angular.z = 0.20 * ((maxDirection - 540) / (directions[1] - directions[0]));
     }
 }
 
