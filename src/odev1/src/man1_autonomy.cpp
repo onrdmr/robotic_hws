@@ -17,12 +17,21 @@ geometry_msgs::Twist cmd_vel;
 
 // 4. Terminal Constraints 
 
-void bruteForceLogic(const sensor_msgs::LaserScan::ConstPtr& laser)
-{
-    static const int directions[]{ 340, 380, 420, 460, 500, 540, 600, 640, 680, 720, 760 };
+void laserCallBack(const sensor_msgs::LaserScan::ConstPtr& laser) {
+    //ASAGIDA BULUNAN IF KOMUTU ORNEK OLARAK VERILMISTIR. SIZIN BURAYI DEGISTIRMENIZ BEKLENMEKTEDIR
+    //BURDAN SONRASINI DEGISTIR
 
-    int maxDirection = directions[0];
-    int minDirection = directions[0];
+    // list of laser data that are evaluated in each cycle
+    constexpr int directions[]{ 340, 380, 420, 460, 500, 540, 600, 640, 680, 720, 760 };
+
+    // center of all directions
+    constexpr int centerDirection{ 540 };
+
+    // gap between each direction
+    constexpr int directionGap{ directions[1] - directions[0] };
+
+    int maxDirection{ directions[0] };
+    int minDirection{ directions[0] };
 
     for (int direction : directions) {
         if (laser->ranges[direction] > laser->ranges[maxDirection]) {
@@ -34,34 +43,19 @@ void bruteForceLogic(const sensor_msgs::LaserScan::ConstPtr& laser)
         }
     }
 
-    if (laser->ranges[maxDirection] < 1.0) {
+    if (laser->ranges[maxDirection] < 1.00) {
         cmd_vel.linear.x = 0.00;
-        cmd_vel.angular.z = 1.00;
+        cmd_vel.angular.z = 3.00;
     }
-    else if (laser->ranges[minDirection] < 0.5) {
-        cmd_vel.linear.x = 0.30;
-        cmd_vel.angular.z = 0.60 * ((540 - minDirection) / (directions[1] - directions[0]));
+    else if (laser->ranges[minDirection] < 0.50) {
+        cmd_vel.linear.x = 0.50;
+        cmd_vel.angular.z = 1.25 * ((centerDirection - minDirection) / directionGap);
     }
     else {
-        cmd_vel.linear.x = 1.00;
-        cmd_vel.angular.z = 0.20 * ((maxDirection - 540) / (directions[1] - directions[0]));
+        cmd_vel.linear.x = 1.25;
+        cmd_vel.angular.z = 0.50 * ((maxDirection - centerDirection) / directionGap);
     }
-}
 
-void laserCallBack(const sensor_msgs::LaserScan::ConstPtr& laser) {
-    //ASAGIDA BULUNAN IF KOMUTU ORNEK OLARAK VERILMISTIR. SIZIN BURAYI DEGISTIRMENIZ BEKLENMEKTEDIR
-    //BURDAN SONRASINI DEGISTIR
-
-    bruteForceLogic(laser);
-
-    // if (laser->ranges[540] > 1.0) {		//Lazerin tam orda noktasındaki olcum (540. indis) 1 metreden fazlaysa
-    //     cmd_vel.linear.x = 0.25;		//cizgisel hiz 0.25 m/s olsun
-    //     cmd_vel.angular.z = 0.0;		//acisal hiz 0.0 radyan/s olsun
-    // }
-    // else {								//fazla degilse
-    //     cmd_vel.linear.x = 0.0;			//cizgisel hiz 0.0 m/s olsun
-    //     cmd_vel.angular.z = 0.25;		//acisal hiz 0.25 radyan/s olsun
-    // }
     //BURDAN SONRASINA DOKUNMA
 
     cmd_vel_pub.publish(cmd_vel);
