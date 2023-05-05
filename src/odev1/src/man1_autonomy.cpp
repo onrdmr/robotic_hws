@@ -48,12 +48,12 @@ void laserCallBack(const sensor_msgs::LaserScan::ConstPtr& laser) {
         cmd_vel.angular.z = 3.00;
     }
     else if (laser->ranges[minDirection] < 0.50) {
-        cmd_vel.linear.x = 0.50;
-        cmd_vel.angular.z = 1.25 * ((centerDirection - minDirection) / directionGap);
+        cmd_vel.linear.x = 0.40;
+        cmd_vel.angular.z = 1.00 * ((centerDirection - minDirection) / directionGap);
     }
     else {
-        cmd_vel.linear.x = 1.25;
-        cmd_vel.angular.z = 0.50 * ((maxDirection - centerDirection) / directionGap);
+        cmd_vel.linear.x = 1.00;
+        cmd_vel.angular.z = 0.40 * ((maxDirection - centerDirection) / directionGap);
     }
 
     //BURDAN SONRASINA DOKUNMA
