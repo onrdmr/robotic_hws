@@ -11,9 +11,15 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
 	//ASAGIDA BULUNAN IF KOMUTU ORNEK OLARAK VERILMISTIR. SIZIN BURAYI DEGISTIRMENIZ BEKLENMEKTEDIR
 	//BURDAN SONRASINI DEGISTIR
 	
+	cv::Mat mat(camera->height, camera->width, CV_8UC3, const_cast<uchar *>(&camera->data[0]),
+    camera->step);
+
+
 	// cmd_vel.linear.x = 0.20;
 	
 	//BURDAN SONRASINA DOKUNMA
+	cv::imshow("OPENCV_WINDOW", mat);
+    cv::waitKey(3);
 
 	cmd_vel_pub.publish(cmd_vel);
 }
