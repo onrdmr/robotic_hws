@@ -11,7 +11,7 @@
 		<arg name="pose_args" value="-x 0 -y 0 -Y 1.57"/>
 	</include>
 
-	<node name="man3" pkg="odev2" type="man3_autonomy"/>
+	<node name="man3" pkg="odev2" type="man3_autonomy" output="screen"/>
 
 	<node pkg="tf" type="static_transform_publisher" name="world2odom" args="0 0 0 0 0 0 /world /rtg/odom 100"/>
 
