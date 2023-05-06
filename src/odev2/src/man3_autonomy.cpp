@@ -9,7 +9,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
 	//ASAGIDA BULUNAN IF KOMUTU ORNEK OLARAK VERILMISTIR. SIZIN BURAYI DEGISTIRMENIZ BEKLENMEKTEDIR
 	//BURDAN SONRASINI DEGISTIR
 	
-	
+	cmd_vel.linear.x = 0.20;
 	
 	//BURDAN SONRASINA DOKUNMA
 
@@ -25,7 +25,7 @@ int main(int argc, char **argv){
 	cmd_vel.angular.x = 0.0;
 	cmd_vel.angular.y = 0.0;
 
-	ros::Subscriber camera_sub = nh.subscribe("/rtg/SIZDOLDURUNUZ", 1000, cameraCallBack);
+	ros::Subscriber camera_sub = nh.subscribe("/rtg/camera/rgb/image_raw", 1000, cameraCallBack);
 	cmd_vel_pub = nh.advertise<geometry_msgs::Twist>("/rtg/cmd_vel", 1000);
 
 	ros::spin();
