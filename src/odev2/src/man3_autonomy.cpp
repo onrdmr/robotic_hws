@@ -2,6 +2,8 @@
 #include "geometry_msgs/Twist.h"
 #include "sensor_msgs/Image.h"
 
+#include <opencv2/opencv.hpp>
+
 ros::Publisher cmd_vel_pub;
 geometry_msgs::Twist cmd_vel;
 
@@ -9,7 +11,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
 	//ASAGIDA BULUNAN IF KOMUTU ORNEK OLARAK VERILMISTIR. SIZIN BURAYI DEGISTIRMENIZ BEKLENMEKTEDIR
 	//BURDAN SONRASINI DEGISTIR
 	
-	cmd_vel.linear.x = 0.20;
+	// cmd_vel.linear.x = 0.20;
 	
 	//BURDAN SONRASINA DOKUNMA
 

@@ -15,6 +15,8 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
 )
 
+find_package(OpenCV REQUIRED)
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -120,6 +122,7 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -153,7 +156,10 @@ include_directories(
 # )
 
 add_executable(man3_autonomy src/man3_autonomy.cpp)
-target_link_libraries(man3_autonomy ${catkin_LIBRARIES})
+target_link_libraries(man3_autonomy 
+  ${catkin_LIBRARIES} 
+  ${OpenCV_LIBRARIES}
+)
 
 add_executable(trajectory src/trajectory.cpp)
 target_link_libraries(trajectory ${catkin_LIBRARIES})
