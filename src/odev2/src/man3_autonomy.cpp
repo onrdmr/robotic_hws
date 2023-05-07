@@ -55,6 +55,43 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
     // cv::morphologyEx(edges, edges, cv::MORPH_OPEN, kernel);
 
 
+	double rho = 1;  // distance precision in pixel, i.e. 1 pixel
+    double angle = CV_PI / 180;  // angular precision in radian, i.e. 1 degree
+    int min_threshold = 10;  // minimal of votes
+  
+
+	int height = mask.rows;	
+    int width = mask.cols;
+    cv::Mat maskHalf = cv::Mat::zeros(mask.size(), mask.type());
+
+    // only focus bottom half of the screen
+    cv::Point pts[4] = {
+        cv::Point(0, height * 1 / 1.2),
+        cv::Point(width, height * 1 / 1.2),
+        cv::Point(width, height),
+        cv::Point(0, height)
+    };
+    cv::fillConvexPoly(maskHalf, pts, 4, cv::Scalar(255, 0, 0));
+
+    cv::Mat croppedEdges;
+    cv::bitwise_and(mask, maskHalf, croppedEdges);
+
+    std::vector<cv::Vec4i> line_segments;
+    
+	cv::imshow("cropped mask", croppedEdges);
+	
+	cv::HoughLinesP(croppedEdges, line_segments, rho, angle, min_threshold, 8, 4);
+
+    // Draw lines on the original image
+    cv::Mat line_image = gray_image.clone();
+    for (auto line : line_segments)
+    {
+        cv::line(line_image, cv::Point(line[0], line[1]), cv::Point(line[2], line[3]), cv::Scalar(0, 0, 255), 2);
+    }
+
+	cv::imshow("direction of line", line_image);
+
+
     // Apply mask to HSV image
     // cv::bitwise_and(hsv_image, hsv_image, masked_image, mask);
 
