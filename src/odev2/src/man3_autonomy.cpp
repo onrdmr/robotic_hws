@@ -17,16 +17,9 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
     camera->step);
 	cv::Mat hsv_image, mask, masked_image, edges;
 
-	// gaussian blur
+	// gaussian blur for hsv conversion
     cv::Mat blurred_image;
     cv::GaussianBlur(rgb_image, blurred_image, cv::Size(5, 5), 0.0, 0.0);
-
-    // Display the original and blurred images side by side
-    cv::Mat side_by_side;
-    cv::hconcat(rgb_image, blurred_image, side_by_side);
-    cv::imshow("Original vs. Blurred", side_by_side);
-    // cv::waitKey(0);
-
     
     // // Convert RGB to HSV
     cv::cvtColor(blurred_image, hsv_image, cv::COLOR_RGB2HSV);
@@ -35,18 +28,49 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
     cv::Scalar upper_red(130, 255, 255);
     cv::inRange(hsv_image, lower_red, upper_red, mask);
     
+
+	cv::Mat gray_image;
+    cv::cvtColor(rgb_image, gray_image, cv::COLOR_BGR2GRAY);
+	
+	cv::Mat erodeElement = cv::getStructuringElement( cv::MORPH_RECT,cv::Size(10,10));
+	cv::Mat dilateElement = cv::getStructuringElement( cv::MORPH_RECT,cv::Size(10,10));
+
+
+	// states are
+	// black reach state 
+	// white reached state
+	// on ramp state up
+	// on ramp state down
+	// going on ramp up
+	// going on ramp down
+
+
+    cv::erode(gray_image,gray_image,erodeElement);
+    cv::dilate(gray_image,gray_image,dilateElement);
+	
+	// Apply Canny edge detection to the blurred image
+    cv::Canny(gray_image, edges, 100, 300, 3);
+
+	// cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+    // cv::morphologyEx(edges, edges, cv::MORPH_OPEN, kernel);
+
+
     // Apply mask to HSV image
     // cv::bitwise_and(hsv_image, hsv_image, masked_image, mask);
-    
+
     // // Convert HSV to RGB
     // cv::cvtColor(masked_image, masked_image, cv::COLOR_HSV2RGB);
-    
+
     // Detect edges in masked RGB image
     // cv::Canny(masked_image, edges, 100, 200);
-    
+
     // Display original RGB image, masked RGB image with edges, and wait for a key press
     // cv::imshow("RGB Image", rgb_image);
-    cv::imshow("mask", mask);
+
+	// Display the original and blurred images side by side
+    cv::Mat side_by_side;
+    cv::hconcat(mask, edges, side_by_side);
+    cv::imshow("blue coloured image  vs. canny edges of environment", side_by_side);
 
     // cv::imshow("Masked RGB Image with Edges", edges);
     cv::waitKey(3);
