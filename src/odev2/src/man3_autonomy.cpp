@@ -73,20 +73,51 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
     };
     cv::fillConvexPoly(maskHalf, pts, 4, cv::Scalar(255, 0, 0));
 
-    cv::Mat croppedEdges;
-    cv::bitwise_and(mask, maskHalf, croppedEdges);
+    cv::Mat croppedMask;
+    cv::bitwise_and(mask, maskHalf, croppedMask);
 
     std::vector<cv::Vec4i> line_segments;
     
-	cv::imshow("cropped mask", croppedEdges);
+	cv::imshow("cropped mask", croppedMask);
 	
+    cv::Mat croppedEdges;
+    cv::Canny(croppedMask, croppedEdges, 50, 200,3);
+
 	cv::HoughLinesP(croppedEdges, line_segments, rho, angle, min_threshold, 8, 4);
 
     // Draw lines on the original image
     cv::Mat line_image = gray_image.clone();
+    std::map<int, int> ordered_xs;
+    std::map<int, int> ordered_ys;
+
     for (auto line : line_segments)
     {
-        cv::line(line_image, cv::Point(line[0], line[1]), cv::Point(line[2], line[3]), cv::Scalar(0, 0, 255), 2);
+        if( line[1] < line[3] ) {
+            ROS_INFO("13");
+            // calculate cosine and bundle same groups
+
+            cv::line(line_image, cv::Point(line[0], line[1]), cv::Point(line[2], line[3]), cv::Scalar(0, 0, 255), 2);
+
+        }
+        else{
+            ROS_INFO("23");
+            // calculate cosine and bundle same groups
+            
+
+            cv::line(line_image, cv::Point(line[2], line[3]), cv::Point(line[0], line[1]), cv::Scalar(0, 0, 255), 2);
+
+
+        }
+
+    }
+
+    
+
+
+    long long x_min, y_min;
+    long long x_max, y_max;
+    for (int i = 0 ; i < 10 ; i++) {
+
     }
 
 	cv::imshow("direction of line", line_image);
