@@ -56,6 +56,8 @@ std::vector<std::pair<int, int>> getMaskIntervals(cv::Mat& maskImage, int row)
 void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
 	//ASAGIDA BULUNAN IF KOMUTU ORNEK OLARAK VERILMISTIR. SIZIN BURAYI DEGISTIRMENIZ BEKLENMEKTEDIR
 	//BURDAN SONRASINI DEGISTIR
+    cv::Point lineDirection;
+
 	
 	cv::Mat rgb_image(camera->height, camera->width, CV_8UC3, const_cast<uchar *>(&camera->data[0]),
     camera->step);
@@ -151,7 +153,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
         dataPoints.at<float>(j,1) = static_cast<float> (line_segments[i][1]);
         dataPoints.at<float>(j+1,0) = static_cast<float> (line_segments[i][2]);
         dataPoints.at<float>(j+1,1) = static_cast<float> (line_segments[i][3]);
-        ROS_INFO("point %f %f : %f %f", dataPoints.at<float>(i,0), dataPoints.at<float>(i,1), dataPoints.at<float>(i+1,0), dataPoints.at<float>(i+1,1) );
+        // ROS_INFO("point %f %f : %f %f", dataPoints.at<float>(i,0), dataPoints.at<float>(i,1), dataPoints.at<float>(i+1,0), dataPoints.at<float>(i+1,1) );
     }
 
     int K=2;
@@ -159,7 +161,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
     if(line_segments.size() == 0) {
         return ;
     }
-    ROS_INFO("N-K: %ld, %d" , line_segments.size(), K);
+    // ROS_INFO("N-K: %ld, %d" , line_segments.size(), K);
 
     cv::TermCriteria criteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 10, 1.0);
     int attempts = 3;
@@ -168,7 +170,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
 
     cv::kmeans(dataPoints, K, labels, criteria, attempts, flags, centers);
 
-    ROS_INFO_STREAM ( "Cluster labels: " << std::endl << labels << std::endl << "Centroids: " << std::endl << centers << std::endl);
+    // ROS_INFO_STREAM ( "Cluster labels: " << std::endl << labels << std::endl << "Centroids: " << std::endl << centers << std::endl);
 
     // if distance between centroid greater than 50
     // applyIntervalElimination Logic
@@ -184,7 +186,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
     auto intervalsCentroid_1 = getMaskIntervals(mask, centroid_1.y); 
     auto intervalsCentroid_2 = getMaskIntervals(mask, centroid_2.y);
 
-    ROS_INFO("first centroid");
+    // ROS_INFO("first centroid");
     int min = 65536;  
 
     int correctLabel=-1;
@@ -192,7 +194,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
 
     std::pair<int,int> minPair;
     for (auto interval : intervalsCentroid_1) {
-        ROS_INFO("f%d-%d", interval.first, interval.second);
+        // ROS_INFO("f%d-%d", interval.first, interval.second);
         if((interval.second - interval.first) < min)
         {
             min = (interval.second - interval.first);
@@ -203,14 +205,14 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
     if (centroid_1.x > minPair.first-5 && centroid_1.x < minPair.second+5)
     {
         correctLabel = 0;
-        ROS_INFO("label 0 ");
+        // ROS_INFO("label 0 ");
         isBothInterval++;
     }
 
-    ROS_INFO("second centroid");
+    // ROS_INFO("second centroid");
     min = 65536;
     for ( auto interval : intervalsCentroid_2) {
-        ROS_INFO("s%d- %d", interval.first, interval.second);
+        // ROS_INFO("s%d- %d", interval.first, interval.second);
         if((interval.second - interval.first) < min)
         {
             min = (interval.second - interval.first);
@@ -222,7 +224,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
     if (centroid_2.x > minPair.first-5 && centroid_2.x < minPair.second+5)
     {
         correctLabel = 1;
-        ROS_INFO("label 1");
+        // ROS_INFO("label 1");
         isBothInterval++;
     }
 
@@ -232,23 +234,9 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
         unsigned long long x=0, y=0;
         for (auto line : line_segments)
         {
-            ROS_INFO("%d,%d", line[2], line[3]);
-            // throw std::runtime_error("error");
-            // if( line[1] < line[3] ) {
-            //     // ROS_INFO("13");
-            //     // calculate cosine and bundle same groups
-            
+            // ROS_INFO("%d,%d", line[2], line[3]);
+
             cv::line(line_image, cv::Point(line[0], line[1]), cv::Point(line[2], line[3]), cv::Scalar(0, 0, 255), 2);
-            
-
-            // }
-            // else{
-                // ROS_INFO("23");
-                // calculate cosine and bundle same groups
-                
-
-            //     cv::line(line_image, cv::Point(line[2], line[3]), cv::Point(line[0], line[1]), cv::Scalar(0, 0, 255), 2);
-            // }
 
             x += line[0];
             x += line[2];
@@ -268,8 +256,8 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
 
         
 
-
-        cv::circle(line_image, cv::Point(x,y), 2, 255 ,-1);
+        lineDirection = cv::Point(x,y);
+        cv::circle(line_image, lineDirection, 2, 255 ,-1);
 
     }
     else 
@@ -284,7 +272,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
                     size++;
                     x += static_cast<int>(dataPoints.at<float>(i,0));
                     y += static_cast<int>(dataPoints.at<float>(i,1));
-                    ROS_INFO("label with points %d-%d", static_cast<int>(dataPoints.at<float>(i,0)), static_cast<int>(dataPoints.at<float>(i,1) ));
+                    // ROS_INFO("label with points %d-%d", static_cast<int>(dataPoints.at<float>(i,0)), static_cast<int>(dataPoints.at<float>(i,1) ));
                     
                 }
 
@@ -292,7 +280,8 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
             }
             y = y / size;
             x = x / size;
-            cv::circle(line_image, cv::Point(x, y), 4, 255 ,-1);
+            lineDirection = cv::Point(x, y);
+            cv::circle(line_image, lineDirection, 4, 255 ,-1);
  
         } else {
             unsigned long long x=0, y=0;
@@ -303,7 +292,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
                     size++;
                     x += static_cast<int>(dataPoints.at<float>(i,0));
                     y += static_cast<int>(dataPoints.at<float>(i,1));
-                    ROS_INFO("label with points %d-%d", static_cast<int>(dataPoints.at<float>(i,0)), static_cast<int>(dataPoints.at<float>(i,1) ));
+                    // ROS_INFO("label with points %d-%d", static_cast<int>(dataPoints.at<float>(i,0)), static_cast<int>(dataPoints.at<float>(i,1) ));
                     
                 }
 
@@ -311,7 +300,9 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
             }
             y = y / (size);
             x = x / (size);
-            cv::circle(line_image, cv::Point(x, y), 4, 255 ,-1);
+            lineDirection = cv::Point(x, y);
+            cv::circle(line_image, lineDirection, 4, 255 ,-1);
+            
         }
     }
 
@@ -340,7 +331,12 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
     cv::waitKey(3);
 
 
+    ROS_INFO("%d %d", lineDirection.x, lineDirection.y);
 
+
+    int dx =  lineDirection.x - 400;
+    int dy = lineDirection.y - 800;
+    
 
 
 	cmd_vel_pub.publish(cmd_vel);
