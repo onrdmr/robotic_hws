@@ -11,7 +11,7 @@ geometry_msgs::Twist cmd_vel;
 
 
 // if robot in the ramp intervals are empty
-std::vector<std::pair<int, int>> middleMaskIntervals(cv::Mat& maskImage, int row)
+std::vector<std::pair<int, int>> getMaskIntervals(cv::Mat& maskImage, int row)
 {
     int middleRow = row;
     cv::Mat middleRowMat = maskImage.row(middleRow).clone();
@@ -107,8 +107,12 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
 	int height = mask.rows;	
     int width = mask.cols;
     
-    middleMaskIntervals(mask, 400);
-
+    auto onRamp = getMaskIntervals(mask, 400); // middle mask is used for detection of ramp 
+    if(onRamp.empty()) {
+        ROS_INFO("I am on ramp");
+    } else {
+        ROS_INFO("I am not in ramp");
+    }
     cv::Mat maskHalf = cv::Mat::zeros(mask.size(), mask.type());
 
     // only focus bottom half of the screen
@@ -166,49 +170,151 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
 
     ROS_INFO_STREAM ( "Cluster labels: " << std::endl << labels << std::endl << "Centroids: " << std::endl << centers << std::endl);
 
-    unsigned long long x=0, y=0;
-    for (auto line : line_segments)
-    {
-        ROS_INFO("%d,%d", line[2], line[3]);
-        // throw std::runtime_error("error");
-        // if( line[1] < line[3] ) {
-        //     // ROS_INFO("13");
-        //     // calculate cosine and bundle same groups
-        
-        cv::line(line_image, cv::Point(line[0], line[1]), cv::Point(line[2], line[3]), cv::Scalar(0, 0, 255), 2);
-        
+    // if distance between centroid greater than 50
+    // applyIntervalElimination Logic
 
-        // }
-        // else{
-            // ROS_INFO("23");
-            // calculate cosine and bundle same groups
-            
-
-        //     cv::line(line_image, cv::Point(line[2], line[3]), cv::Point(line[0], line[1]), cv::Scalar(0, 0, 255), 2);
-        // }
-
-        x += line[0];
-        x += line[2];
-        y += line[1];
-        y += line[3];
-    }
-
-    if(line_segments.size() > 0 ) {
-        y = y / (line_segments.size() * 2);
-        x = x / (line_segments.size() * 2);
-    } else {
-        x = 400;
-        y = 700;
-    }
-
-    // ROS_INFO("%lld- %lld", x, y);
+    cv::Point centroid_1 = cv::Point(static_cast<int>(centers.at<float>(0)),static_cast<int>(centers.at<float>(1)));
+    cv::Point centroid_2 = cv::Point(static_cast<int>(centers.at<float>(2)),static_cast<int>(centers.at<float>(3)));
 
     // cv::drawMarker(line_image, cv::Point(static_cast<int>(centers.at<float>(0)),static_cast<int>(centers.at<float>(1))), 2, 255 ,-1);
-    cv::drawMarker(line_image, cv::Point(static_cast<int>(centers.at<float>(0)),static_cast<int>(centers.at<float>(1))), 255, cv::MARKER_CROSS, 5, 2);
-    cv::drawMarker(line_image, cv::Point(static_cast<int>(centers.at<float>(2)),static_cast<int>(centers.at<float>(3))), 255, cv::MARKER_CROSS, 5, 2);
+    cv::drawMarker(line_image, centroid_1, 255, cv::MARKER_CROSS, 5, 2);
+    cv::drawMarker(line_image, centroid_2, 255, cv::MARKER_CROSS, 5, 2);
+    
+    // find which one is eliminated
+    auto intervalsCentroid_1 = getMaskIntervals(mask, centroid_1.y); 
+    auto intervalsCentroid_2 = getMaskIntervals(mask, centroid_2.y);
+
+    ROS_INFO("first centroid");
+    int min = 65536;  
+
+    int correctLabel=-1;
+    int isBothInterval=0;
+
+    std::pair<int,int> minPair;
+    for (auto interval : intervalsCentroid_1) {
+        ROS_INFO("f%d-%d", interval.first, interval.second);
+        if((interval.second - interval.first) < min)
+        {
+            min = (interval.second - interval.first);
+            minPair = interval;
+        }
+    }
+
+    if (centroid_1.x > minPair.first-5 && centroid_1.x < minPair.second+5)
+    {
+        correctLabel = 0;
+        ROS_INFO("label 0 ");
+        isBothInterval++;
+    }
+
+    ROS_INFO("second centroid");
+    min = 65536;
+    for ( auto interval : intervalsCentroid_2) {
+        ROS_INFO("s%d- %d", interval.first, interval.second);
+        if((interval.second - interval.first) < min)
+        {
+            min = (interval.second - interval.first);
+            minPair = interval;
+        }
+        
+    }
+
+    if (centroid_2.x > minPair.first-5 && centroid_2.x < minPair.second+5)
+    {
+        correctLabel = 1;
+        ROS_INFO("label 1");
+        isBothInterval++;
+    }
+
+    // use all line segments
+    if(isBothInterval == 2) {
+
+        unsigned long long x=0, y=0;
+        for (auto line : line_segments)
+        {
+            ROS_INFO("%d,%d", line[2], line[3]);
+            // throw std::runtime_error("error");
+            // if( line[1] < line[3] ) {
+            //     // ROS_INFO("13");
+            //     // calculate cosine and bundle same groups
+            
+            cv::line(line_image, cv::Point(line[0], line[1]), cv::Point(line[2], line[3]), cv::Scalar(0, 0, 255), 2);
+            
+
+            // }
+            // else{
+                // ROS_INFO("23");
+                // calculate cosine and bundle same groups
+                
+
+            //     cv::line(line_image, cv::Point(line[2], line[3]), cv::Point(line[0], line[1]), cv::Scalar(0, 0, 255), 2);
+            // }
+
+            x += line[0];
+            x += line[2];
+            y += line[1];
+            y += line[3];
+        }
+
+        if(line_segments.size() > 0 ) {
+            y = y / (line_segments.size() * 2);
+            x = x / (line_segments.size() * 2);
+        } else {
+            x = 400;
+            y = 700;
+        }
+
+        // ROS_INFO("%lld- %lld", x, y);
+
+        
 
 
-    cv::circle(line_image, cv::Point(x,y), 2, 255 ,-1);
+        cv::circle(line_image, cv::Point(x,y), 2, 255 ,-1);
+
+    }
+    else 
+    {
+        if(correctLabel == 0)
+        {
+            unsigned long long size = 0;
+            unsigned long long x=0, y=0;
+            for ( int i = 0 ; i < dataPointsLen ; i++)
+            {
+                if(labels.at<int>(i,0) == false) {
+                    size++;
+                    x += static_cast<int>(dataPoints.at<float>(i,0));
+                    y += static_cast<int>(dataPoints.at<float>(i,1));
+                    ROS_INFO("label with points %d-%d", static_cast<int>(dataPoints.at<float>(i,0)), static_cast<int>(dataPoints.at<float>(i,1) ));
+                    
+                }
+
+
+            }
+            y = y / size;
+            x = x / size;
+            cv::circle(line_image, cv::Point(x, y), 4, 255 ,-1);
+ 
+        } else {
+            unsigned long long x=0, y=0;
+            unsigned long long size = 0;
+            for ( int i = 0 ; i < dataPointsLen ; i++)
+            {
+                if(labels.at<int>(i,0) == true) {
+                    size++;
+                    x += static_cast<int>(dataPoints.at<float>(i,0));
+                    y += static_cast<int>(dataPoints.at<float>(i,1));
+                    ROS_INFO("label with points %d-%d", static_cast<int>(dataPoints.at<float>(i,0)), static_cast<int>(dataPoints.at<float>(i,1) ));
+                    
+                }
+
+
+            }
+            y = y / (size);
+            x = x / (size);
+            cv::circle(line_image, cv::Point(x, y), 4, 255 ,-1);
+        }
+    }
+
 
 	cv::imshow("direction of line", line_image);
 
