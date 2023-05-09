@@ -9,6 +9,50 @@
 ros::Publisher cmd_vel_pub;
 geometry_msgs::Twist cmd_vel;
 
+
+// if robot in the ramp intervals are empty
+std::vector<std::pair<int, int>> middleMaskIntervals(cv::Mat& maskImage, int row)
+{
+    int middleRow = row;
+    cv::Mat middleRowMat = maskImage.row(middleRow).clone();
+
+    std::vector<std::pair<int,int>> intervals;
+
+
+    int intervalStart = 0, whiteCursor, blackCursor;
+    bool lastlyWhite=false;
+    for (int i = 0 ; i < middleRowMat.cols ; i++) {
+        // ROS_INFO("image size : %d - %d", middleRowMat.rows, middleRowMat.cols);
+        // ROS_INFO("%d ", middleRowMat.at<uchar>(0,i));
+        
+        if(middleRowMat.at<uchar>(0,i) > 100){
+            whiteCursor = i;
+            lastlyWhite = true;
+        }else {
+            if(lastlyWhite) 
+            {
+                intervals.push_back(std::pair<int,int>(intervalStart, whiteCursor));
+                lastlyWhite = false;
+            }
+            blackCursor = i;
+            intervalStart = blackCursor;
+        }
+    }
+    
+    if( intervalStart != middleRowMat.cols-1 ) {
+        intervals.push_back(std::pair<int,int>(intervalStart, whiteCursor));
+
+    }
+
+    for( auto item : intervals)
+    {
+        // ROS_INFO("%d - %d interval is white", item.first, item.second);
+    }
+
+    return intervals;
+
+}
+
 void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
 	//ASAGIDA BULUNAN IF KOMUTU ORNEK OLARAK VERILMISTIR. SIZIN BURAYI DEGISTIRMENIZ BEKLENMEKTEDIR
 	//BURDAN SONRASINI DEGISTIR
@@ -62,6 +106,9 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
 
 	int height = mask.rows;	
     int width = mask.cols;
+    
+    middleMaskIntervals(mask, 400);
+
     cv::Mat maskHalf = cv::Mat::zeros(mask.size(), mask.type());
 
     // only focus bottom half of the screen
@@ -87,38 +134,81 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
 
     // Draw lines on the original image
     cv::Mat line_image = gray_image.clone();
-    std::map<int, int> ordered_xs;
-    std::map<int, int> ordered_ys;
+    
+    // take medium point of line segments
+    int dataPointsLen = line_segments.size();
+    cv::Mat dataPoints(dataPointsLen, 2, CV_32F);
+    cv::Mat labels;
+    cv::Mat centers;
 
+    for (int i = 0, j=0 ; i < dataPointsLen ; i++, j++)
+    {   
+        dataPoints.at<float>(j,0) = static_cast<float> (line_segments[i][0]);
+        dataPoints.at<float>(j,1) = static_cast<float> (line_segments[i][1]);
+        dataPoints.at<float>(j+1,0) = static_cast<float> (line_segments[i][2]);
+        dataPoints.at<float>(j+1,1) = static_cast<float> (line_segments[i][3]);
+        ROS_INFO("point %f %f : %f %f", dataPoints.at<float>(i,0), dataPoints.at<float>(i,1), dataPoints.at<float>(i+1,0), dataPoints.at<float>(i+1,1) );
+    }
+
+    int K=2;
+
+    if(line_segments.size() == 0) {
+        return ;
+    }
+    ROS_INFO("N-K: %ld, %d" , line_segments.size(), K);
+
+    cv::TermCriteria criteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 10, 1.0);
+    int attempts = 3;
+
+    int flags = cv::KMEANS_RANDOM_CENTERS;
+
+    cv::kmeans(dataPoints, K, labels, criteria, attempts, flags, centers);
+
+    ROS_INFO_STREAM ( "Cluster labels: " << std::endl << labels << std::endl << "Centroids: " << std::endl << centers << std::endl);
+
+    unsigned long long x=0, y=0;
     for (auto line : line_segments)
     {
-        if( line[1] < line[3] ) {
-            ROS_INFO("13");
-            // calculate cosine and bundle same groups
+        ROS_INFO("%d,%d", line[2], line[3]);
+        // throw std::runtime_error("error");
+        // if( line[1] < line[3] ) {
+        //     // ROS_INFO("13");
+        //     // calculate cosine and bundle same groups
+        
+        cv::line(line_image, cv::Point(line[0], line[1]), cv::Point(line[2], line[3]), cv::Scalar(0, 0, 255), 2);
+        
 
-            cv::line(line_image, cv::Point(line[0], line[1]), cv::Point(line[2], line[3]), cv::Scalar(0, 0, 255), 2);
-
-        }
-        else{
-            ROS_INFO("23");
+        // }
+        // else{
+            // ROS_INFO("23");
             // calculate cosine and bundle same groups
             
 
-            cv::line(line_image, cv::Point(line[2], line[3]), cv::Point(line[0], line[1]), cv::Scalar(0, 0, 255), 2);
+        //     cv::line(line_image, cv::Point(line[2], line[3]), cv::Point(line[0], line[1]), cv::Scalar(0, 0, 255), 2);
+        // }
 
-
-        }
-
+        x += line[0];
+        x += line[2];
+        y += line[1];
+        y += line[3];
     }
 
-    
-
-
-    long long x_min, y_min;
-    long long x_max, y_max;
-    for (int i = 0 ; i < 10 ; i++) {
-
+    if(line_segments.size() > 0 ) {
+        y = y / (line_segments.size() * 2);
+        x = x / (line_segments.size() * 2);
+    } else {
+        x = 400;
+        y = 700;
     }
+
+    // ROS_INFO("%lld- %lld", x, y);
+
+    // cv::drawMarker(line_image, cv::Point(static_cast<int>(centers.at<float>(0)),static_cast<int>(centers.at<float>(1))), 2, 255 ,-1);
+    cv::drawMarker(line_image, cv::Point(static_cast<int>(centers.at<float>(0)),static_cast<int>(centers.at<float>(1))), 255, cv::MARKER_CROSS, 5, 2);
+    cv::drawMarker(line_image, cv::Point(static_cast<int>(centers.at<float>(2)),static_cast<int>(centers.at<float>(3))), 255, cv::MARKER_CROSS, 5, 2);
+
+
+    cv::circle(line_image, cv::Point(x,y), 2, 255 ,-1);
 
 	cv::imshow("direction of line", line_image);
 
@@ -142,6 +232,10 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera){
 
     // cv::imshow("Masked RGB Image with Edges", edges);
     cv::waitKey(3);
+
+
+
+
 
 	cmd_vel_pub.publish(cmd_vel);
 }
