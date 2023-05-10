@@ -11,7 +11,9 @@ geometry_msgs::Twist cmd_vel;
 
 
 // if robot in the ramp intervals are empty
-std::vector<std::pair<int, int>> getMaskIntervals(cv::Mat& maskImage, int row)
+// if robot in the ramp intervals are empty
+// if robot in the ramp intervals are empty
+std::vector<std::pair<int, int>> getMaskIntervals(cv::Mat& maskImage, int row, int threshold)
 {
     int middleRow = row;
     cv::Mat middleRowMat = maskImage.row(middleRow).clone();
@@ -25,7 +27,7 @@ std::vector<std::pair<int, int>> getMaskIntervals(cv::Mat& maskImage, int row)
         // ROS_INFO("image size : %d - %d", middleRowMat.rows, middleRowMat.cols);
         // ROS_INFO("%d ", middleRowMat.at<uchar>(0,i));
 
-        if(middleRowMat.at<uchar>(0,i) > 100){
+        if(middleRowMat.at<uchar>(0,i) > threshold){
             whiteCursor = i;
             lastlyWhite = true;
         }else {
@@ -61,7 +63,7 @@ void applyColouredInterval(cv::Mat &mat, int i, std::tuple<std::pair<int,int>, i
     std::pair<int,int> interval = std::get<0>(colouredInterval);
     int colorCursor = std::get<1>(colouredInterval); 
     
-    for(int j = interval.first; j < interval.second ; j++) 
+    for(int j = interval.first; j <= interval.second ; j++) 
     {
         mat.at<uchar>(i,j) = colors[colorCursor];
     }
@@ -135,11 +137,11 @@ void segmentMask(cv::Mat& mat) {
 
     std::vector<std::tuple<std::pair<int,int>, int, int>> coloredIntervals; // first pair column intervals, second int colorCursor, third int row
     for( int i = 1 ; i < rowLength ; i++ ) {
-        std::vector<std::pair<int,int>> intervals = getMaskIntervals(mat, i);
-        if(intervals.size() == 2) 
-        {
-            std::cout << "interval" << std::endl;
-        }
+        std::vector<std::pair<int,int>> intervals = getMaskIntervals(mat, i, 100);
+        // if(intervals.size() == 2) 
+        // {
+        //     std::cout << "interval" << std::endl;
+        // }
         for( auto interval : intervals ){
             if(!isInColouredIntervals(coloredIntervals, interval)) {
                 std::tuple<std::pair<int,int>, int, int> colouredInterval {interval, colorCursor++, i};
@@ -155,12 +157,57 @@ void segmentMask(cv::Mat& mat) {
 
 
 
-    cv::imshow("segmented", mat);
+    // cv::imshow("segmented", mat);
     
     // throw std::runtime_excetion("");
     cv::waitKey(3);
 }
 
+
+// movement state can be set  by hand on ramp different on the line different etc.
+bool searchForLine( cv::Mat& segmentedImage, cv::Point& point, int movementStep) {
+    // ROS_INFO("searching for line");
+    int row = segmentedImage.cols-1;
+    
+    unsigned long long point_x = 0;
+    unsigned long long point_y = 0;
+    int len = 0;
+
+    for ( int i = 0 ; i <  movementStep ; i++) {
+        // ROS_INFO("getting interval %d" , i);
+
+        auto intervals = getMaskIntervals(segmentedImage, row-i, 200);
+        // ROS_INFO("OKEY");
+        
+
+        if(intervals.size() == 1) {
+            int mean=(intervals[0].first + intervals[0].second) / 2;
+            point_x += mean;
+            point_y += row-i;
+            len++;
+        }
+
+        // if(intervals.size() == 2) {
+        //     std::cout << "hey" << std::endl;
+        //     int a = static_cast<int>(segmentedImage.at<uchar>( row-i , intervals[1].first + 5));
+        //     int b = static_cast<int>(segmentedImage.at<uchar>( intervals[1].first + 5, row-i ));
+
+        //     std::cout << "" << a << std::endl;
+        // }
+    }
+
+    // ROS_INFO("is something wrong here");
+    if(len != 0) {
+        point.x = point_x / len;
+        point.y = point_y / len;
+        return true;
+    } else {
+        return false;
+    }
+
+}
+
+cv::Point point;
 
 void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 {
@@ -191,9 +238,29 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
     
     segmentMask(mask);
 
+    
+
+    searchForLine( mask, point, 50);
+
+
+    cv::drawMarker( mask, point, 125, cv::MARKER_CROSS, 5, 2 );
+    cv::imshow("endimage", mask);
+
     cv::waitKey(3);
 
     // cmd_vel.linear.x = 1;
+
+
+    int dx =  point.x - 400;
+    int dy = point.y - 800;
+
+
+    double radian = std::atan(dx/(double)dy);
+
+    ROS_INFO("%d:%d -- %d:%d -- %f", point.x, point.y, dx, dy, radian * (180.0 / 3.141592653589793238463));
+
+    cmd_vel.linear.x = 1;
+    cmd_vel.angular.z = radian;
 
     cmd_vel_pub.publish(cmd_vel);
 }
