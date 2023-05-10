@@ -10,6 +10,8 @@ ros::Publisher cmd_vel_pub;
 geometry_msgs::Twist cmd_vel;
 
 
+
+
 // if robot in the ramp intervals are empty
 // if robot in the ramp intervals are empty
 // if robot in the ramp intervals are empty
@@ -53,7 +55,58 @@ std::vector<std::pair<int, int>> getMaskIntervals(cv::Mat& maskImage, int row, i
     return intervals;
 }
 
+std::vector<std::pair<int, int>> getMaskIntervalsC(cv::Mat& maskImage, int column, int threshold)
+{
+    int middleColumn = column;
+    cv::Mat middleColumndMat = maskImage.col(middleColumn).clone();
 
+    std::vector<std::pair<int,int>> intervals;
+
+
+    int intervalStart = 0, whiteCursor, blackCursor;
+    bool lastlyWhite=false;
+    for (int i = 0 ; i < middleColumndMat.rows ; i++) {
+        // ROS_INFO("image size : %d - %d", middleColumndMat.rows, middleColumndMat.cols);
+        // ROS_INFO("%d ", middleColumndMat.at<uchar>(0,i));
+
+        if(middleColumndMat.at<uchar>(i,0) > threshold){
+            whiteCursor = i;
+            lastlyWhite = true;
+        }else {
+            if(lastlyWhite) 
+            {
+                intervals.push_back(std::pair<int,int>(intervalStart, whiteCursor));
+                lastlyWhite = false;
+            }
+            blackCursor = i;
+            intervalStart = blackCursor;
+        }
+    }
+    
+    if( intervalStart != middleColumndMat.cols-1 ) {
+        intervals.push_back(std::pair<int,int>(intervalStart, whiteCursor));
+    }
+
+    for( auto item : intervals)
+    {
+        // ROS_INFO("%d - %d interval is white", item.first, item.second);
+    }
+
+    return intervals;
+}
+
+
+bool onTheRamp(cv::Mat & mask) {
+    auto onRamp = getMaskIntervals(mask, 400, 100); // middle mask is used for detection of ramp 
+    if(onRamp.empty()) {
+        ROS_INFO("I am on ramp");
+        return true;
+    } else {
+        ROS_INFO("I am not in ramp");
+        return false;
+    }
+
+}
 
 void applyColouredInterval(cv::Mat &mat, int i, std::tuple<std::pair<int,int>, int, int> colouredInterval )
 {
@@ -163,7 +216,22 @@ void segmentMask(cv::Mat& mat) {
     cv::waitKey(3);
 }
 
+bool isObstacle(cv::Mat & mat) {
+    auto intervalsR = getMaskIntervals(mat, 400, 100);
+    auto intervalsC = getMaskIntervalsC(mat, 0, 100);
+    if(intervalsR.size()!=1 || intervalsC.size() != 1) {
+        ROS_INFO("%ld:%ld sizes : ERROR", intervalsR.size(), intervalsC.size());
+        return false;
+    }
 
+    if(intervalsR[0].second - intervalsR[0].first > 300 || intervalsC[0].second - intervalsC[0].first > 300) {
+        ROS_INFO("There is obstacle in road");
+        return true;
+    }
+    return false;
+}
+
+int i = 0;
 // movement state can be set  by hand on ramp different on the line different etc.
 bool searchForLine( cv::Mat& segmentedImage, cv::Point& point, int movementStep) {
     // ROS_INFO("searching for line");
@@ -172,6 +240,7 @@ bool searchForLine( cv::Mat& segmentedImage, cv::Point& point, int movementStep)
     unsigned long long point_x = 0;
     unsigned long long point_y = 0;
     int len = 0;
+
 
     for ( int i = 0 ; i <  movementStep ; i++) {
         // ROS_INFO("getting interval %d" , i);
@@ -187,13 +256,7 @@ bool searchForLine( cv::Mat& segmentedImage, cv::Point& point, int movementStep)
             len++;
         }
 
-        // if(intervals.size() == 2) {
-        //     std::cout << "hey" << std::endl;
-        //     int a = static_cast<int>(segmentedImage.at<uchar>( row-i , intervals[1].first + 5));
-        //     int b = static_cast<int>(segmentedImage.at<uchar>( intervals[1].first + 5, row-i ));
-
-        //     std::cout << "" << a << std::endl;
-        // }
+        
     }
 
     // ROS_INFO("is something wrong here");
@@ -202,12 +265,53 @@ bool searchForLine( cv::Mat& segmentedImage, cv::Point& point, int movementStep)
         point.y = point_y / len;
         return true;
     } else {
-        return false;
+        if ( !isObstacle(segmentedImage) || onTheRamp(segmentedImage) ) {
+            ROS_INFO("Recovery Behaviour");
+            point_x = 0;
+            point_y = 0;
+            for ( int i = 0 ; i <  movementStep ; i++) {
+                // ROS_INFO("getting interval %d" , i);
+
+                auto intervals = getMaskIntervals(segmentedImage, row-i, 100);
+                // ROS_INFO("OKEY");
+                
+
+                if(intervals.size() == 1) {
+                    int mean=(intervals[0].first + intervals[0].second) / 2;
+                    point_x += mean;
+                    point_y += row-i;
+                    len++;
+                }
+                
+            }
+            if(len != 0) {
+                point.x = point_x / len;
+                point.y = point_y / len;
+                return true;
+            }
+            // if(intervals.size() == 2) {
+            //     std::cout << "hey" << std::endl;
+            //     int a = static_cast<int>(segmentedImage.at<uchar>( row-i , intervals[1].first + 5));
+            //     int b = static_cast<int>(segmentedImage.at<uchar>( intervals[1].first + 5, row-i ));
+
+            //     std::cout << "" << a << std::endl;
+            // }
+            return false;
+        } else {
+            std::stringstream file ;
+            file <<  "/home/onur/errorMask" << i << ".jpg";
+            i++; 
+            cv::imwrite( file.str(), segmentedImage);
+
+            ROS_INFO("BOŞ DÖNDÜ BURASI HATA OLUŞTURABİLİR!!!!");
+            return false;
+        }
     }
 
 }
 
 cv::Point point;
+
 
 void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 {
@@ -234,13 +338,22 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 
     cv::imshow("RGB_IMAGE", mask);
 
+    
     cv::imwrite("/home/onur/debug.jpg", mask);
     
     segmentMask(mask);
-
+    // isObstacle(mask);
     
 
     searchForLine( mask, point, 50);
+
+    // auto onRamp = getMaskIntervals(mask, 400, 100); // middle mask is used for detection of ramp 
+    // if(onRamp.empty()) {
+    //     ROS_INFO("I am on ramp");
+    // } else {
+    //     ROS_INFO("I am not in ramp");
+    // }
+
 
 
     cv::drawMarker( mask, point, 125, cv::MARKER_CROSS, 5, 2 );
@@ -259,7 +372,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 
     ROS_INFO("%d:%d -- %d:%d -- %f", point.x, point.y, dx, dy, radian * (180.0 / 3.141592653589793238463));
 
-    cmd_vel.linear.x = 1;
+    cmd_vel.linear.x = 2;
     cmd_vel.angular.z = radian;
 
     cmd_vel_pub.publish(cmd_vel);
