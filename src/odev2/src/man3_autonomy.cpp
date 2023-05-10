@@ -53,7 +53,7 @@ std::vector<std::pair<int, int>> getMaskIntervals(cv::Mat& maskImage, int row)
 
 
 
-void applyColouredInterval(cv::Mat &mat, int i,std::tuple<std::pair<int,int>, int> colouredInterval )
+void applyColouredInterval(cv::Mat &mat, int i, std::tuple<std::pair<int,int>, int, int> colouredInterval )
 {
 
     int colors[2] = {125,255};
@@ -65,49 +65,84 @@ void applyColouredInterval(cv::Mat &mat, int i,std::tuple<std::pair<int,int>, in
     {
         mat.at<uchar>(i,j) = colors[colorCursor];
     }
-
+    // cv::imshow("appplied_colorization", mat);
+    // cv::waitKey(3);
+    // std::cout << "waiting" << std::endl;
 }
 
-bool isInColouredIntervals(std::vector<std::tuple<std::pair<int,int>, int>> &colouredVector, std::pair<int,int> & interval) {
-    for(auto item : colouredVector) {
-        auto itemInterval = std::get<0>(item); 
-        if(itemInterval.second < interval.first && itemInterval.second < interval.second ) {
-            return false;
-        } else if (interval.second < itemInterval.first && interval.second < itemInterval.second) {
-            return false;
+bool isInColouredIntervals(std::vector<std::tuple<std::pair<int,int>, int, int>> &colouredVector, std::pair<int,int> & interval) {
+    if(colouredVector.empty()){
+        return false;
+    }
+    if(colouredVector.size() == 2) {
+        return true;
+    } else {
+        for(auto item : colouredVector) {
+            auto itemInterval = std::get<0>(item); 
+            if(itemInterval.second < interval.first && itemInterval.second < interval.second ) {
+                return false;
+            } else if (interval.second < itemInterval.first && interval.second < itemInterval.second) {
+                return false;
+            }
         }
+
     }
     return true;
 }
 
-void applyAndUpdateColouredInterval(cv::Mat& mat, int i, std::vector<std::tuple<std::pair<int,int>, int>> colouredIntervals, std::pair<int,int>& interval) {
-    for(auto & item : colouredIntervals) {
-        auto itemInterval = std::get<0>(item);
-        if(itemInterval.second < interval.first && itemInterval.second < interval.second ) {
-            continue;
-        } else if (interval.second < itemInterval.first && interval.second < itemInterval.second) {
-            continue;
+void applyAndUpdateColouredInterval(cv::Mat& mat, int i, std::vector<std::tuple<std::pair<int,int>, int, int>>& colouredIntervals, std::pair<int,int>& interval) {
+    if(colouredIntervals.size() == 2) {
+        int mean = (interval.first + interval.second) / 2 ;
+        auto colouredInterval_0 = std::get<0>(colouredIntervals[0]);
+        int colouredMean_0 = (colouredInterval_0.first + colouredInterval_0.second) / 2;
+        int row_0 = std::get<2>(colouredIntervals[0]);
+
+        auto colouredInterval_1 = std::get<0>(colouredIntervals[1]);
+        int colouredMean_1 = (colouredInterval_1.first + colouredInterval_1.second) / 2;
+        int row_1 = std::get<2>(colouredIntervals[1]);
+        
+        if(std::abs(colouredMean_0 - mean) + std::abs( i - row_0 ) < std::abs(colouredMean_1 - mean) + std::abs( i - row_1) ) {
+            colouredIntervals[0] = std::tuple<std::pair<int,int>, int, int> { interval, std::get<1>(colouredIntervals[0]), i }; 
+            applyColouredInterval( mat, i, colouredIntervals[0] );
         } else {
-            item = std::tuple<std::pair<int,int>, int> {interval, std::get<1>(item)}; 
-            applyColouredInterval(mat, i, item);
-            break;
+            colouredIntervals[1] = std::tuple<std::pair<int,int>, int, int> { interval, std::get<1>(colouredIntervals[1]), i };
+            applyColouredInterval( mat, i, colouredIntervals[1] );
+        }
+    } else {
+
+        for(auto & item : colouredIntervals) {
+            auto itemInterval = std::get<0>(item);
+            if(itemInterval.second < interval.first && itemInterval.second < interval.second ) {
+                continue;
+            } else if (interval.second < itemInterval.first && interval.second < itemInterval.second) {
+                continue;
+            } else {
+                item = std::tuple<std::pair<int,int>, int, int> {interval, std::get<1>(item), i}; 
+                applyColouredInterval(mat, i, item);
+                break;
+            }
         }
     }
+    
 }
 
 void segmentMask(cv::Mat& mat) {
     size_t rowLength = mat.rows;
     size_t colLength = mat.cols;
 
-    int colorCursor = 1;
+    int colorCursor = 0;
 
 
-    std::vector<std::tuple<std::pair<int,int>, int>> coloredIntervals;
+    std::vector<std::tuple<std::pair<int,int>, int, int>> coloredIntervals; // first pair column intervals, second int colorCursor, third int row
     for( int i = 1 ; i < rowLength ; i++ ) {
         std::vector<std::pair<int,int>> intervals = getMaskIntervals(mat, i);
+        if(intervals.size() == 2) 
+        {
+            std::cout << "interval" << std::endl;
+        }
         for( auto interval : intervals ){
             if(!isInColouredIntervals(coloredIntervals, interval)) {
-                std::tuple<std::pair<int,int>, int> colouredInterval {interval, colorCursor++};
+                std::tuple<std::pair<int,int>, int, int> colouredInterval {interval, colorCursor++, i};
                 coloredIntervals.push_back(colouredInterval);
                 applyColouredInterval(mat, i, colouredInterval);
             } else {
@@ -118,70 +153,14 @@ void segmentMask(cv::Mat& mat) {
 
     }
 
-    // for( int i = 1 ; i < rowLength ; i++ ) {
-    //     for( int j = 0 ; j < colLength ; j++ ) {
-    //         if (mat.at<uchar>(i, j) == 255)
-    //         {
-    //             mat.at<uchar>(i,j) = 0;
 
-    //         }
-    //     }
-    // }
-  
-    //     for( int i = 1 ; i < rowLength ; i++ ) {
-    //     for( int j = 0 ; j < colLength ; j++ ) {
-    //         if (mat.at<uchar>(i, j) == 10)
-    //         {
-    //             ROS_INFO("%d",mat.at<int>(i,j));
-                
-    //         }
-    //     }
-    // }
-
-    // for( int j = 0 ; j < colLength ; j++) {
-    //     if (mat.at<uchar>(0, j) == 255)
-    //     {
-    //         mat.at<uchar>(0, j) = colors[(colorCursor==1) ? 0: 1];
-    //         changed = true;
-    //     }
-    //     else {
-    //         if(changed)
-    //         {
-    //             colorCursor = -colorCursor;
-
-    //         }
-    //         changed = false;
-    //     }
-    // }
-
-    // for( int i = 1 ; i < rowLength ; i++ ) {
-    //     for( int j = 0 ; j < colLength ; j++ ) {
-    //         if( (mat.at<uchar>(i, j) == 255) ) {
-    //             if(mat.at<uchar>(i-1, j)) {
-    //                 mat.at<uchar>(i, j) = colors[(colorCursor==1) ? 0: 1];
-    //             } else if (mat.at<int>(i-1, j)) {
-    //                 mat.at<uchar>(i, j) = colors[(colorCursor==1) ? 0: 1];
-    //             } else if (j > 1 && mat.at<int>(i-1, j-1)) {
-    //                 mat.at<uchar>(i, j) = colors[(colorCursor==1) ? 0: 1];
-    //             } else if (j > 1 && mat.at<int>(i-1, j+1)) {
-    //                 mat.at<uchar>(i, j) = colors[(colorCursor==1) ? 0: 1];
-    //             } else {
-
-    //             }
-    //             changed = true;
-    //         }
-    //         else {
-    //             if(changed) {
-    //                 colorCursor = -colorCursor;
-    //             }
-    //             changed = false;
-    //         }
-    //     } 
-    // }
 
     cv::imshow("segmented", mat);
+    
+    // throw std::runtime_excetion("");
     cv::waitKey(3);
 }
+
 
 void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 {
@@ -208,6 +187,8 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 
     cv::imshow("RGB_IMAGE", mask);
 
+    cv::imwrite("/home/onur/debug.jpg", mask);
+    
     segmentMask(mask);
 
     cv::waitKey(3);
