@@ -216,7 +216,7 @@ void segmentMask(cv::Mat& mat) {
     cv::waitKey(3);
 }
 
-bool isObstacle(cv::Mat & mat) {
+bool isObstacle(cv::Mat & mat, const int && length, int & area) {
     auto intervalsR = getMaskIntervals(mat, 400, 100);
     auto intervalsC = getMaskIntervalsC(mat, 0, 100);
     if(intervalsR.size()!=1 || intervalsC.size() != 1) {
@@ -224,14 +224,20 @@ bool isObstacle(cv::Mat & mat) {
         return false;
     }
 
-    if(intervalsR[0].second - intervalsR[0].first > 300 || intervalsC[0].second - intervalsC[0].first > 300) {
-        ROS_INFO("There is obstacle in road");
+    if(intervalsR[0].second - intervalsR[0].first > length || intervalsC[0].second - intervalsC[0].first > length) {
+        area = (intervalsR[0].second - intervalsR[0].first) * intervalsC[0].second - intervalsC[0].first;
+        ROS_INFO("There is obstacle in road with area %d", area);
+        
         return true;
     }
     return false;
 }
 
 int i = 0;
+
+int vehicleStateTransition = 1; // it is above or below
+bool previouslyRamp = false;
+
 // movement state can be set  by hand on ramp different on the line different etc.
 bool searchForLine( cv::Mat& segmentedImage, cv::Point& point, int movementStep) {
     // ROS_INFO("searching for line");
@@ -265,7 +271,23 @@ bool searchForLine( cv::Mat& segmentedImage, cv::Point& point, int movementStep)
         point.y = point_y / len;
         return true;
     } else {
-        if ( !isObstacle(segmentedImage) || onTheRamp(segmentedImage) ) {
+        int area;
+        bool isObstacleSeen = isObstacle(segmentedImage, 400, area);
+        bool isRobotOnRamp = onTheRamp(segmentedImage);
+
+        if(previouslyRamp == true && isRobotOnRamp == false) {
+            vehicleStateTransition = -vehicleStateTransition;
+            ROS_INFO("vehicle translation changed %d", vehicleStateTransition);
+        }
+
+        if(isRobotOnRamp) 
+        {
+            previouslyRamp = true;
+        } else {
+            previouslyRamp = false;
+        }
+
+        if ( !isObstacleSeen || isRobotOnRamp ) {
             ROS_INFO("Recovery Behaviour");
             point_x = 0;
             point_y = 0;
@@ -287,19 +309,24 @@ bool searchForLine( cv::Mat& segmentedImage, cv::Point& point, int movementStep)
             if(len != 0) {
                 point.x = point_x / len;
                 point.y = point_y / len;
-                return true;
             }
-            // if(intervals.size() == 2) {
-            //     std::cout << "hey" << std::endl;
-            //     int a = static_cast<int>(segmentedImage.at<uchar>( row-i , intervals[1].first + 5));
-            //     int b = static_cast<int>(segmentedImage.at<uchar>( intervals[1].first + 5, row-i ));
-
-            //     std::cout << "" << a << std::endl;
-            // }
+            
             return false;
-        } else {
+
+        } if(isObstacleSeen && !isRobotOnRamp) {
+
+                ROS_INFO("Can i turn");
+                if(vehicleStateTransition == -1 ) {
+                    ROS_INFO("turn with %d", static_cast<int>(30 * (area / (double)(800*800))));
+                    ROS_INFO("Vehicle now in above");
+                    point.x += static_cast<int>(30 * (area / (double)(800*800)));
+
+                }
+                return true;
+        }
+        else {
             std::stringstream file ;
-            file <<  "/home/onur/errorMask" << i << ".jpg";
+            file << "/home/onur/errorMask" << i << ".jpg";
             i++; 
             cv::imwrite( file.str(), segmentedImage);
 
@@ -318,7 +345,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 	cv::Mat rgbImage(camera->height, camera->width, CV_8UC3, const_cast<uchar *>(&camera->data[0]),
     camera->step);
 
-    cv::Mat hsv_image, mask, masked_image, edges;
+    cv::Mat hsv_image, mask, masked_image, edges, gray_image;
 
     // gaussian blur for hsv conversion
     cv::Mat blurred_image;
@@ -332,16 +359,29 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
     cv::inRange(hsv_image, lower_red, upper_red, mask);
     
 
+    // erode element
+    cv::cvtColor(rgbImage, gray_image, cv::COLOR_BGR2GRAY);
+	cv::Mat erodeElement = cv::getStructuringElement( cv::MORPH_RECT,cv::Size(10,10));
+	cv::Mat dilateElement = cv::getStructuringElement( cv::MORPH_RECT,cv::Size(10,10));
+
+    cv::erode(gray_image, gray_image, erodeElement);
+    cv::dilate(gray_image, gray_image, dilateElement);
+	
+	// Apply Canny edge detection to the blurred image
+    cv::Canny(gray_image, edges, 100, 300, 3);
+    cv::imshow("edges", edges);
+
+
 
 	// cv::Mat gray_image;
     // cv::cvtColor(rgbImage, gray_image, cv::COLOR_BGR2GRAY);
 
     cv::imshow("RGB_IMAGE", mask);
 
-    
+
     cv::imwrite("/home/onur/debug.jpg", mask);
-    
-    segmentMask(mask);
+
+    segmentMask( mask );
     // isObstacle(mask);
     
 
@@ -354,8 +394,8 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
     //     ROS_INFO("I am not in ramp");
     // }
 
-
-
+    
+    
     cv::drawMarker( mask, point, 125, cv::MARKER_CROSS, 5, 2 );
     cv::imshow("endimage", mask);
 
@@ -372,7 +412,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 
     ROS_INFO("%d:%d -- %d:%d -- %f", point.x, point.y, dx, dy, radian * (180.0 / 3.141592653589793238463));
 
-    cmd_vel.linear.x = 2;
+    cmd_vel.linear.x = 1;
     cmd_vel.angular.z = radian;
 
     cmd_vel_pub.publish(cmd_vel);
