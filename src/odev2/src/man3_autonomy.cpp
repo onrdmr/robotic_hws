@@ -219,8 +219,20 @@ void segmentMask(cv::Mat& mat) {
 bool isObstacle(cv::Mat & mat, const int && length, int & area) {
     auto intervalsR = getMaskIntervals(mat, 400, 100);
     auto intervalsC = getMaskIntervalsC(mat, 0, 100);
+    auto intervalsC_right = getMaskIntervalsC(mat, 799, 100);
+    auto intervalsM = getMaskIntervalsC(mat, 300, 100);
+
+    if (intervalsC.empty() && !intervalsC_right.empty()) 
+    {
+        intervalsC = intervalsC_right;
+    }
+    if(!intervalsM.empty() && (intervalsM[0].second - intervalsM[0].first) >  intervalsC[0].second - intervalsC[0].first ) {
+        intervalsC = intervalsM;
+    }
+        ROS_INFO("%ld:%ld sizes ", intervalsC.size(), intervalsC.size());
+        ROS_INFO("%ld:%ld sizes R", intervalsR.size(), intervalsR.size());
+
     if(intervalsR.size()!=1 || intervalsC.size() != 1) {
-        ROS_INFO("%ld:%ld sizes : ERROR", intervalsR.size(), intervalsC.size());
         return false;
     }
 
@@ -247,6 +259,10 @@ bool searchForLine( cv::Mat& segmentedImage, cv::Point& point, int movementStep)
     unsigned long long point_y = 0;
     int len = 0;
 
+    int area;
+
+    bool isObstacleSeen = isObstacle(segmentedImage, 400, area);
+    bool isRobotOnRamp = onTheRamp(segmentedImage);
 
     for ( int i = 0 ; i <  movementStep ; i++) {
         // ROS_INFO("getting interval %d" , i);
@@ -267,13 +283,30 @@ bool searchForLine( cv::Mat& segmentedImage, cv::Point& point, int movementStep)
 
     // ROS_INFO("is something wrong here");
     if(len != 0) {
-        point.x = point_x / len;
-        point.y = point_y / len;
+        
+       if(vehicleStateTransition == -1 ) {
+            ROS_INFO("area %d", area);
+            ROS_INFO("turn with %d", static_cast<int>(450 * (area / (double)(800*800))));
+            ROS_INFO("Vehicle now in above");
+            point.x += (point_x / len) + static_cast<int>(450 * (area / (double)(800*800)));
+            point.y = point_y / len; 
+
+        }
+
+        if( vehicleStateTransition == -1 && std::abs(static_cast<int>(point_x / len) - static_cast<int>(point.x)) > 30 && std::abs(static_cast<int>(point.y) - static_cast<int>(point_y / len)) > 30 ) {
+                    
+            ROS_INFO("outlier with %d, %d : %d %d", point.x, point.y, static_cast<int>(point_x / len), static_cast<int>(point_y / len));
+            cmd_vel.linear.x=0.9;
+        } else {
+            point.x = point_x / len;
+            point.y = point_y / len; 
+        }
+
         return true;
     } else {
-        int area;
-        bool isObstacleSeen = isObstacle(segmentedImage, 400, area);
-        bool isRobotOnRamp = onTheRamp(segmentedImage);
+        
+
+        ROS_INFO("IS OBSTACLE SEEN %d: on ramp %d", isObstacleSeen, isRobotOnRamp);
 
         if(previouslyRamp == true && isRobotOnRamp == false) {
             vehicleStateTransition = -vehicleStateTransition;
@@ -305,23 +338,29 @@ bool searchForLine( cv::Mat& segmentedImage, cv::Point& point, int movementStep)
                     len++;
                 }
                 
+                // cv::imwrite("/home/onur/imageWithPoint.jpg", mask);
+
             }
             if(len != 0) {
-                point.x = point_x / len;
-                point.y = point_y / len;
+                // outlier detection
+                
+                if( vehicleStateTransition == -1 && std::abs(static_cast<int>(point_x / len) - static_cast<int>(point.x)) > 40 && std::abs(static_cast<int>(point.y) - static_cast<int>(point_y / len)) > 40 ) {
+                    
+                    ROS_INFO("outlier with %d, %d : %d %d", point.x, point.y, static_cast<int>(point_x / len), static_cast<int>(point_y / len));
+                    cmd_vel.linear.x=0.9;
+                } else {
+                    point.x = point_x / len;
+                    point.y = point_y / len; 
+                }
             }
-            
+            cmd_vel.linear.x = 0;
             return false;
 
         } if(isObstacleSeen && !isRobotOnRamp) {
 
-                ROS_INFO("Can i turn");
-                if(vehicleStateTransition == -1 ) {
-                    ROS_INFO("turn with %d", static_cast<int>(30 * (area / (double)(800*800))));
-                    ROS_INFO("Vehicle now in above");
-                    point.x += static_cast<int>(30 * (area / (double)(800*800)));
+                ROS_INFO("Can i turn only see cylinder %d", static_cast<int>(750 * (area / (double)(800*800))));
+                point.x += static_cast<int>(750 * (area / (double)(800*800)));
 
-                }
                 return true;
         }
         else {
@@ -371,6 +410,9 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
     cv::Canny(gray_image, edges, 100, 300, 3);
     cv::imshow("edges", edges);
 
+    auto intervals = getMaskIntervalsC(edges, 400, 100);
+
+    ROS_INFO("canny edge from aboce : %d %d", intervals[0].second, intervals[1].first);
 
 
 	// cv::Mat gray_image;
@@ -396,8 +438,10 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 
     
     
-    cv::drawMarker( mask, point, 125, cv::MARKER_CROSS, 5, 2 );
+    cv::drawMarker( mask, point, 100, cv::MARKER_CROSS, 5, 2 );
     cv::imshow("endimage", mask);
+    cv::imwrite("/home/onur/endimage.jpg", mask);
+
 
     cv::waitKey(3);
 
