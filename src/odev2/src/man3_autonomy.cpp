@@ -15,6 +15,8 @@ geometry_msgs::Twist cmd_vel;
 // if robot in the ramp intervals are empty
 // if robot in the ramp intervals are empty
 // if robot in the ramp intervals are empty
+
+
 std::vector<std::pair<int, int>> getMaskIntervals(cv::Mat& maskImage, int row, int threshold)
 {
     int middleRow = row;
@@ -96,6 +98,7 @@ std::vector<std::pair<int, int>> getMaskIntervalsC(cv::Mat& maskImage, int colum
 }
 
 
+
 bool onTheRamp(cv::Mat & mask) {
     auto onRamp = getMaskIntervals(mask, 400, 100); // middle mask is used for detection of ramp 
     if(onRamp.empty()) {
@@ -122,7 +125,7 @@ void applyColouredInterval(cv::Mat &mat, int i, std::tuple<std::pair<int,int>, i
     }
     // cv::imshow("appplied_colorization", mat);
     // cv::waitKey(3);
-    // std::cout << "waiting" << std::endl;
+    // //std::cout << "waiting" << std::endl;
 }
 
 bool isInColouredIntervals(std::vector<std::tuple<std::pair<int,int>, int, int>> &colouredVector, std::pair<int,int> & interval) {
@@ -156,7 +159,7 @@ void applyAndUpdateColouredInterval(cv::Mat& mat, int i, std::vector<std::tuple<
         int colouredMean_1 = (colouredInterval_1.first + colouredInterval_1.second) / 2;
         int row_1 = std::get<2>(colouredIntervals[1]);
         
-        if(std::abs(colouredMean_0 - mean) + std::abs( i - row_0 ) < std::abs(colouredMean_1 - mean) + std::abs( i - row_1) ) {
+        if(std::abs(colouredMean_0 - mean) + std::abs( i - row_0 ) < std::abs(colouredMean_1 - mean) + std::abs( i - row_1 ) ) {
             colouredIntervals[0] = std::tuple<std::pair<int,int>, int, int> { interval, std::get<1>(colouredIntervals[0]), i }; 
             applyColouredInterval( mat, i, colouredIntervals[0] );
         } else {
@@ -190,19 +193,70 @@ void segmentMask(cv::Mat& mat) {
 
     std::vector<std::tuple<std::pair<int,int>, int, int>> coloredIntervals; // first pair column intervals, second int colorCursor, third int row
     for( int i = 1 ; i < rowLength ; i++ ) {
+         if( i == 700 ) {
+            //  cv::drawMarker( mat, cv::Point(static_cast<int>((interval.first + interval.second)/2), i), 50, cv::MARKER_CROSS, 5, 2 );
+            //     cv::waitKey(3);
+            //std::cout << "hay aq" << std::endl;
+        }
         std::vector<std::pair<int,int>> intervals = getMaskIntervals(mat, i, 100);
-        // if(intervals.size() == 2) 
-        // {
-        //     std::cout << "interval" << std::endl;
-        // }
+        if(intervals.size() == 1) 
+        {
+            //std::cout << "interval" << intervals[0].second << " " << intervals[0].first << std::endl;
+        } 
+        if( intervals.size() >= 2) {
+            // union small segments
+            //std::cout << "interval" << intervals[0].second << " " << intervals[0].first << std::endl;
+            //std::cout << "interval" << intervals[1].second << " " << intervals[1].first << std::endl;
+            std::vector<std::pair<int,int>> segments2Union;
+            int first = 0, second=0 , j;
+            for(j = 0 ; j < intervals.size()-1 ; j++) {
+                if( intervals[j+1].first - intervals[j].second < 10) {
+                    second = j+1;
+                    if(second == intervals.size()-1) {
+                        segments2Union.push_back({first,second});
+                    }
+                } else {
+                    if(first != second){
+                        segments2Union.push_back({first,second});
+                        first = second+1;
+
+                    }
+                }
+            }
+            for(j = 0 ; j < segments2Union.size() ; j++)
+            {   
+                intervals[j].first = intervals[segments2Union[j].first].first;
+                intervals[j].second = intervals[segments2Union[j].second].second;
+            }
+
+            if(segments2Union.size() != 0) {
+                intervals.erase(intervals.begin(),intervals.end());
+            }
+
+            //std::cout << "error" << std::endl;
+        }
+        if( i == 700 ) {
+            //  cv::drawMarker( mat, cv::Point(static_cast<int>((interval.first + interval.second)/2), i), 50, cv::MARKER_CROSS, 5, 2 );
+            //     cv::waitKey(3);
+            //std::cout << "hay aq" << std::endl;
+        }
         for( auto interval : intervals ){
+            if(i ==700) {
+                // cv::drawMarker( mat, cv::Point(static_cast<int>((interval.first + interval.second)/2), i), 50, cv::MARKER_CROSS, 5, 2 );
+                // cv::waitKey(3);
+                ////std::cout << "errr" << std::endl;
+
+            }
             if(!isInColouredIntervals(coloredIntervals, interval)) {
                 std::tuple<std::pair<int,int>, int, int> colouredInterval {interval, colorCursor++, i};
                 coloredIntervals.push_back(colouredInterval);
                 applyColouredInterval(mat, i, colouredInterval);
+
             } else {
                 applyAndUpdateColouredInterval(mat, i, coloredIntervals, interval);
-            } 
+                // cv::imshow("ColouredInterval", mat);
+                // cv::waitKey(3);
+            }
 
         }
 
