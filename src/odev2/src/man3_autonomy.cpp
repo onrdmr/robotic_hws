@@ -443,9 +443,9 @@ bool searchForLine(cv::Mat& segmentedImage, cv::Point& point, int movementStep) 
         ROS_INFO("vehcile %d", vehicleStateTransition );
         if (vehicleStateTransition == -1) {
             ROS_INFO("area %d", area);
-            ROS_INFO("turn with %d", static_cast<int>(450 * (area / (double)(800 * 800))));
+            ROS_INFO("turn with %d", static_cast<int>(700 * (obstacleArea / (double)(800 * 800))));
             ROS_INFO("Vehicle now in above");
-            point.x += (point_x / len) + static_cast<int>(450 * (area / (double)(800 * 800)));
+            point.x += (point_x / len) + static_cast<int>(700 * (obstacleArea / (double)(800 * 800)));
             point.y = point_y / len;
 
         }
@@ -508,8 +508,8 @@ bool searchForLine(cv::Mat& segmentedImage, cv::Point& point, int movementStep) 
 
         } if (isObstacleSeen && !isRobotOnRamp) {
 
-            ROS_INFO("Can i turn only see cylinder %d", static_cast<int>(750 * (area / (double)(800 * 800))));
-            point.x += static_cast<int>(750 * (area / (double)(800 * 800)));
+            ROS_INFO("Can i turn only see cylinder %d", static_cast<int>(750 * (obstacleArea / (double)(800 * 800))));
+            point.x += static_cast<int>(obstacleArea * (area / (double)(800 * 800)));
 
             return true;
         }
@@ -527,6 +527,7 @@ bool searchForLine(cv::Mat& segmentedImage, cv::Point& point, int movementStep) 
 }
 
 cv::Point point;
+bool rotated=false;
 
 
 void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
@@ -595,14 +596,13 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 
     double radian = std::atan(dx / (double)dy);
 
-
     // std::vector<cv::Mat> hsv_channels;
     // split(hsv_image, hsv_channels);
     ROS_INFO("%d",cv::countNonZero(mask) );
 
-    cv::Rect roi(0, 600, hsv_image.cols, 200);
+    cv::Rect roi(0, 700, hsv_image.cols, 100);
 
-    cv::Mat img_roi = hsv_image(roi);
+    cv::Mat img_roi = hsv_image(roi).colRange(0,300);
 
     if( cv::countNonZero(mask) == 0 ) {
         
@@ -612,13 +612,22 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
         cv::Scalar avg_val = mean(img_roi.rowRange(0, img_roi.rows).col(2));
 
 
-        if(avg_val[0] < 80.0 && avg_val[0] > 10.0) {
+        if(avg_val[0] < 80.0 && avg_hue[0] > 14 && avg_sat[0] > 14  && avg_val[0] > 14) {
             ROS_INFO("rotating... ");
+            rotated = true;
             cmd_vel.linear.x = 0;
             cmd_vel.angular.z = -0.9;
 
         }
+        else {
 
+            if(!rotated)
+            {
+                ROS_INFO("Go direct");
+                cmd_vel.linear.x = 0.9;
+                cmd_vel.angular.z = 0;
+            }
+        }
         // Print the average values of Hue, Saturation, and Value channels
         ROS_INFO_STREAM( "Average Hue: " << avg_hue[0] );
         ROS_INFO_STREAM( "Average Saturation: " << avg_sat[0] );
@@ -627,7 +636,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
         cv::imshow("ROI", img_roi);
 
     } else {
-        ROS_INFO("fuck");
+        // ROS_INFO("fuck");
         cmd_vel.linear.x = 0.9;
         cmd_vel.angular.z = radian;
 
@@ -635,7 +644,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 
     cv::imshow("endimage", mask);
     cv::imshow("image",rgbImage);
-    cv::drawMarker(mask, point, 100, cv::MARKER_CROSS, 5, 2);
+    cv::drawMarker(mask, point, 50, cv::MARKER_CROSS, 5, 2);
     cv::imwrite("/home/onur/endimage.jpg", mask);
 
 
