@@ -384,7 +384,7 @@ void rotateUntillLineInMiddle(cv::Point& point) {
 
     ROS_INFO("%d-%d = %d", point.x, point.y, std::abs(point.x - 400) );
 
-    if(std::abs(point.x - 400) < 50)
+    if(std::abs(point.x - 400) < 180)
     {
         rotateState = false;
     }
@@ -426,8 +426,8 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 
     ROS_INFO("obstacle area is %lld -- direct %d" , obstacleArea, (obstacleDirection * static_cast<int>(350 * (obstacleArea / (double)(800 * 800)))));
     
-    if( obstacleArea > 85000 ){
-        point.x += (obstacleDirection * static_cast<int>(450 * (obstacleArea / (double)(800 * 800)))) ;
+    if( obstacleArea > 77000 ){
+        point.x += (obstacleDirection * static_cast<int>(623 * (obstacleArea / (double)(800 * 800)))) ;
 
     }
 
@@ -443,7 +443,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 
     cv::Rect roi(0, 700, hsv_image.cols, 100);
 
-    cv::Mat img_roi = hsv_image(roi).colRange(0, 300);
+    cv::Mat img_roi = hsv_image(roi).colRange(250, 550);
     cv::imshow("ROI", img_roi);
 
     if(rotateState) {
@@ -460,7 +460,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
             ROS_INFO_STREAM( "Average Value: " << avg_val[0] );
             cmd_vel.linear.x = 0.7;
             cmd_vel.angular.z = 0;
-            if(avg_hue[0] > 14.5 && avg_sat[0] > 14.5 && avg_val[0] > 14.5 )
+            if(avg_hue[0] > 14.5 && avg_sat[0] > 14.5 && avg_val[0] > 14.7 )
             {
                 i++;
                 if(i == 3) {
@@ -472,7 +472,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
         }
         else {
             // //ROS_INFO("fuk");
-            cmd_vel.linear.x = 1;
+            cmd_vel.linear.x = 0.95;
             cmd_vel.angular.z = radian;
 
         }
