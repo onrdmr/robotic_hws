@@ -103,7 +103,7 @@ bool isObstacle(cv::Mat& mat, const int&& length, int& area) {
     {
         intervalsC = intervalsC_right;
     }
-    if (!intervalsM.empty() && (intervalsM[0].second - intervalsM[0].first) > intervalsC[0].second - intervalsC[0].first) {
+    if (!intervalsM.empty() && (intervalsM[0].second - intervalsM[0].first) > (intervalsC[0].second - intervalsC[0].first)) {
         intervalsC = intervalsM;
     }
 
@@ -369,7 +369,7 @@ bool searchForLine(cv::Mat& segmentedImage, cv::Point& point, int movementStep)
     }
     else {
         cmd_vel.angular.z = 0;
-
+        point.x = 400;
     }
     return true;
 }
@@ -378,17 +378,17 @@ bool searchForLine(cv::Mat& segmentedImage, cv::Point& point, int movementStep)
 bool rotateState = false;
 
 void rotateUntillLineInMiddle(cv::Point& point) {
-    
+
     cmd_vel.linear.x = 0;
-    cmd_vel.angular.z = -0.6;
+    cmd_vel.angular.z = -2.0;
 
-    ROS_INFO("%d-%d = %d", point.x, point.y, std::abs(point.x - 400) );
+    ROS_INFO("%d-%d = %d", point.x, point.y, std::abs(point.x - 400));
 
-    if(std::abs(point.x - 400) < 180)
+    if (std::abs(point.x - 600) < 200)
     {
         rotateState = false;
     }
-    
+
 }
 
 
@@ -422,23 +422,25 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
     segmentMask(mask);
 
 
-    searchForLine(mask, point , 100);
+    searchForLine(mask, point, 100);
 
-    ROS_INFO("obstacle area is %lld -- direct %d" , obstacleArea, (obstacleDirection * static_cast<int>(350 * (obstacleArea / (double)(800 * 800)))));
-    
-    if( obstacleArea > 77000 ){
-        point.x += (obstacleDirection * static_cast<int>(623 * (obstacleArea / (double)(800 * 800)))) ;
+    ROS_INFO("obstacle area is %lld -- direct %d", obstacleArea, (obstacleDirection * static_cast<int>(350 * (obstacleArea / (double)(800 * 800)))));
+
+    if (obstacleArea > 20000) {
+        point.x += (obstacleDirection * 100);
 
     }
 
+    ROS_INFO("point is at %d", point.x);
 
     // ROS_INFO("point %d -- %d", point.x, point.y);
 
-    int dx = point.x - 400;
-    int dy = point.y - 800;
+    double dx = 400 - point.x;
+    // int dy = point.y - 800;
 
+    double radian = std::atan(dx / 50);
 
-    double radian = std::atan(dx / (double)dy);
+    ROS_INFO("radian is %lf", radian);
 
 
     cv::Rect roi(0, 700, hsv_image.cols, 100);
@@ -446,33 +448,34 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
     cv::Mat img_roi = hsv_image(roi).colRange(250, 550);
     cv::imshow("ROI", img_roi);
 
-    if(rotateState) {
+    if (rotateState) {
         rotateUntillLineInMiddle(point);
 
-    } else {
+    }
+    else {
 
         if (cv::countNonZero(mask) == 0) {
             cv::Scalar avg_hue = mean(img_roi.rowRange(0, img_roi.rows).col(0));
             cv::Scalar avg_sat = mean(img_roi.rowRange(0, img_roi.rows).col(1));
             cv::Scalar avg_val = mean(img_roi.rowRange(0, img_roi.rows).col(2));
-            ROS_INFO_STREAM( "Average Hue: " << avg_hue[0] );
-            ROS_INFO_STREAM( "Average Saturation: " << avg_sat[0] );
-            ROS_INFO_STREAM( "Average Value: " << avg_val[0] );
-            cmd_vel.linear.x = 0.7;
+            // ROS_INFO_STREAM( "Average Hue: " << avg_hue[0] );
+            // ROS_INFO_STREAM( "Average Saturation: " << avg_sat[0] );
+            // ROS_INFO_STREAM( "Average Value: " << avg_val[0] );
+            cmd_vel.linear.x = 0.5;
             cmd_vel.angular.z = 0;
-            if(avg_hue[0] > 14.5 && avg_sat[0] > 14.5 && avg_val[0] > 14.7 )
+            if (avg_hue[0] > 14.5 && avg_sat[0] > 14.5 && avg_val[0] > 14.7)
             {
                 i++;
-                if(i == 3) {
-                    rotateState= true;
-                    i=0;
+                if (i == 2) {
+                    rotateState = true;
+                    i = 0;
                 }
             }
 
         }
         else {
             // //ROS_INFO("fuk");
-            cmd_vel.linear.x = 0.95;
+            cmd_vel.linear.x = 0.60;
             cmd_vel.angular.z = radian;
 
         }
