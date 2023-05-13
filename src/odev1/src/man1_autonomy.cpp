@@ -55,7 +55,7 @@ void laserCallBack(const sensor_msgs::LaserScan::ConstPtr& laser) {
         cmd_vel.linear.x = 1.00;
         cmd_vel.angular.z = 0.40 * ((maxDirection - centerDirection) / directionGap);
     }
-
+    
     //BURDAN SONRASINA DOKUNMA
 
     cmd_vel_pub.publish(cmd_vel);

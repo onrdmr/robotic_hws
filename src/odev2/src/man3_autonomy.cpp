@@ -19,6 +19,7 @@ unsigned long long int lineArea = 0;
 // if robot in the ramp intervals are empty
 
 
+
 std::vector<std::pair<int, int>> getMaskIntervals(cv::Mat& maskImage, int row, int threshold)
 {
     int middleRow = row;
@@ -91,6 +92,33 @@ std::vector<std::pair<int, int>> getMaskIntervalsC(cv::Mat& maskImage, int colum
     return intervals;
 }
 
+
+bool isObstacle(cv::Mat& mat, const int&& length, int& area) {
+    auto intervalsR = getMaskIntervals(mat, 400, 100);
+    auto intervalsC = getMaskIntervalsC(mat, 0, 100);
+    auto intervalsC_right = getMaskIntervalsC(mat, 799, 100);
+    auto intervalsM = getMaskIntervalsC(mat, 300, 100);
+
+    if (intervalsC.empty() && !intervalsC_right.empty())
+    {
+        intervalsC = intervalsC_right;
+    }
+    if (!intervalsM.empty() && (intervalsM[0].second - intervalsM[0].first) > intervalsC[0].second - intervalsC[0].first) {
+        intervalsC = intervalsM;
+    }
+
+    if (intervalsR.size() != 1 || intervalsC.size() != 1) {
+        return false;
+    }
+
+    if (intervalsR[0].second - intervalsR[0].first > length || intervalsC[0].second - intervalsC[0].first > length) {
+        area = (intervalsR[0].second - intervalsR[0].first) * intervalsC[0].second - intervalsC[0].first;
+        //ROS_INFO("There is obstacle in road with area %d", area);
+
+        return true;
+    }
+    return false;
+}
 
 
 bool onTheRamp(cv::Mat& mask) {
@@ -220,7 +248,8 @@ bool isOnlyOneSegment(cv::Mat& mat) {
 }
 
 void extraCheck(cv::Mat& mat) {
-    if (isOnlyOneSegment(mat)) {
+    int area;
+    if (!isObstacle(mat, 125, area) && isOnlyOneSegment(mat)) {
         for (int i = 0; i < mat.rows; i++) {
             for (int j = 0; j < mat.cols; j++) {
                 if (static_cast<int>(mat.at<uchar>(i, j)) == 125) {
@@ -304,32 +333,6 @@ void segmentMask(cv::Mat& mat) {
     // cv::waitKey(3);
 }
 
-bool isObstacle(cv::Mat& mat, const int&& length, int& area) {
-    auto intervalsR = getMaskIntervals(mat, 400, 100);
-    auto intervalsC = getMaskIntervalsC(mat, 0, 100);
-    auto intervalsC_right = getMaskIntervalsC(mat, 799, 100);
-    auto intervalsM = getMaskIntervalsC(mat, 300, 100);
-
-    if (intervalsC.empty() && !intervalsC_right.empty())
-    {
-        intervalsC = intervalsC_right;
-    }
-    if (!intervalsM.empty() && (intervalsM[0].second - intervalsM[0].first) > intervalsC[0].second - intervalsC[0].first) {
-        intervalsC = intervalsM;
-    }
-
-    if (intervalsR.size() != 1 || intervalsC.size() != 1) {
-        return false;
-    }
-
-    if (intervalsR[0].second - intervalsR[0].first > length || intervalsC[0].second - intervalsC[0].first > length) {
-        area = (intervalsR[0].second - intervalsR[0].first) * intervalsC[0].second - intervalsC[0].first;
-        //ROS_INFO("There is obstacle in road with area %d", area);
-
-        return true;
-    }
-    return false;
-}
 
 // TODO: hay aq aynı kodu tekrar yazamıyom.
 bool searchForLine(cv::Mat& segmentedImage, cv::Point& point, int movementStep)
@@ -364,17 +367,35 @@ bool searchForLine(cv::Mat& segmentedImage, cv::Point& point, int movementStep)
         point.x = (point_x / len);//+ static_cast<int>(450 * (area / (double)(800 * 800)));
         point.y = point_y / len;
     }
+    else {
+        cmd_vel.angular.z = 0;
 
+    }
     return true;
 }
 
 
-cv::Point point;
-bool rotated = false;
+bool rotateState = false;
+
+void rotateUntillLineInMiddle(cv::Point& point) {
+    
+    cmd_vel.linear.x = 0;
+    cmd_vel.angular.z = -0.6;
+
+    ROS_INFO("%d-%d = %d", point.x, point.y, std::abs(point.x - 400) );
+
+    if(std::abs(point.x - 400) < 50)
+    {
+        rotateState = false;
+    }
+    
+}
 
 
+int i = 0;
 void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 {
+    cv::Point point;
     obstacleArea = 0; lineArea = 0;
     cv::Mat rgbImage(camera->height, camera->width, CV_8UC3, const_cast<uchar*>(&camera->data[0]),
         camera->step);
@@ -401,7 +422,17 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
     segmentMask(mask);
 
 
-    searchForLine(mask, point, 50);
+    searchForLine(mask, point , 100);
+
+    ROS_INFO("obstacle area is %lld -- direct %d" , obstacleArea, (obstacleDirection * static_cast<int>(350 * (obstacleArea / (double)(800 * 800)))));
+    
+    if( obstacleArea > 85000 ){
+        point.x += (obstacleDirection * static_cast<int>(450 * (obstacleArea / (double)(800 * 800)))) ;
+
+    }
+
+
+    // ROS_INFO("point %d -- %d", point.x, point.y);
 
     int dx = point.x - 400;
     int dy = point.y - 800;
@@ -415,19 +446,38 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
     cv::Mat img_roi = hsv_image(roi).colRange(0, 300);
     cv::imshow("ROI", img_roi);
 
-    if (cv::countNonZero(mask) == 0) {
-        cv::Scalar avg_hue = mean(img_roi.rowRange(0, img_roi.rows).col(0));
-        cv::Scalar avg_sat = mean(img_roi.rowRange(0, img_roi.rows).col(1));
-        cv::Scalar avg_val = mean(img_roi.rowRange(0, img_roi.rows).col(2));
+    if(rotateState) {
+        rotateUntillLineInMiddle(point);
 
+    } else {
 
+        if (cv::countNonZero(mask) == 0) {
+            cv::Scalar avg_hue = mean(img_roi.rowRange(0, img_roi.rows).col(0));
+            cv::Scalar avg_sat = mean(img_roi.rowRange(0, img_roi.rows).col(1));
+            cv::Scalar avg_val = mean(img_roi.rowRange(0, img_roi.rows).col(2));
+            ROS_INFO_STREAM( "Average Hue: " << avg_hue[0] );
+            ROS_INFO_STREAM( "Average Saturation: " << avg_sat[0] );
+            ROS_INFO_STREAM( "Average Value: " << avg_val[0] );
+            cmd_vel.linear.x = 0.7;
+            cmd_vel.angular.z = 0;
+            if(avg_hue[0] > 14.5 && avg_sat[0] > 14.5 && avg_val[0] > 14.5 )
+            {
+                i++;
+                if(i == 3) {
+                    rotateState= true;
+                    i=0;
+                }
+            }
+
+        }
+        else {
+            // //ROS_INFO("fuk");
+            cmd_vel.linear.x = 1;
+            cmd_vel.angular.z = radian;
+
+        }
     }
-    else {
-        // //ROS_INFO("fuck");
-        cmd_vel.linear.x = 0.1;
-        cmd_vel.angular.z = radian;
 
-    }
 
     cv::drawMarker(mask, point, 100, cv::MARKER_CROSS, 5, 2);
     cv::imshow("endimage", mask);
