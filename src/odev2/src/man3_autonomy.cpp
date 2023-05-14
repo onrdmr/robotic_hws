@@ -242,7 +242,7 @@ bool isOnlyOneSegment(cv::Mat& mat) {
                 // ROS_INFO("white exist at %d- %d",i,j);
                 whitePixelThreshold++;
             }
-            if(whitePixelThreshold == 250){
+            if (whitePixelThreshold == 250) {
                 return false;
             }
         }
@@ -397,8 +397,11 @@ void rotateUntillLineInMiddle(cv::Point& point) {
 
 
 int i = 0;
-void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
-{
+
+void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera) {
+    //ASAGIDA BULUNAN IF KOMUTU ORNEK OLARAK VERILMISTIR. SIZIN BURAYI DEGISTIRMENIZ BEKLENMEKTEDIR
+    //BURDAN SONRASINI DEGISTIR
+
     cv::Point point;
     obstacleArea = 0; lineArea = 0;
     cv::Mat rgbImage(camera->height, camera->width, CV_8UC3, const_cast<uchar*>(&camera->data[0]),
@@ -418,10 +421,8 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
     cv::inRange(hsv_image, lower_red, upper_red, mask);
 
 
-    cv::imshow("RGB_IMAGE", mask);
+    // cv::imshow("RGB_IMAGE", mask);
 
-
-    cv::imwrite("/home/onur/debug.jpg", mask);
 
     segmentMask(mask);
 
@@ -450,7 +451,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
     cv::Rect roi(0, 700, hsv_image.cols, 100);
 
     cv::Mat img_roi = hsv_image(roi).colRange(250, 550);
-    cv::imshow("ROI", img_roi);
+    // cv::imshow("ROI", img_roi);
 
     if (rotateState) {
         rotateUntillLineInMiddle(point);
@@ -478,7 +479,6 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 
         }
         else {
-            // //ROS_INFO("fuk");
             cmd_vel.linear.x = 0.80;
             cmd_vel.angular.z = radian;
 
@@ -487,14 +487,13 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 
 
     cv::drawMarker(mask, point, 100, cv::MARKER_CROSS, 5, 2);
-    cv::imshow("endimage", mask);
-    cv::imshow("image", rgbImage);
-    cv::imwrite("/home/onur/endimage.jpg", mask);
+    // cv::imshow("endimage", mask);
+    // cv::imshow("image", rgbImage);
 
 
     cv::waitKey(3);
 
-
+    //BURDAN SONRASINA DOKUNMA
 
     cmd_vel_pub.publish(cmd_vel);
 }
