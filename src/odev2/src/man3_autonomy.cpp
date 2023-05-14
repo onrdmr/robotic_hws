@@ -235,10 +235,14 @@ void applyAndUpdateColouredInterval(cv::Mat& mat, int i, std::vector<std::tuple<
 }
 
 bool isOnlyOneSegment(cv::Mat& mat) {
+    int whitePixelThreshold = 0;
     for (int i = 0; i < mat.rows; i++) {
         for (int j = 0; j < mat.cols; j++) {
             if (static_cast<int>(mat.at<uchar>(i, j)) != 125 && static_cast<int>(mat.at<uchar>(i, j)) != 0) {
                 // ROS_INFO("white exist at %d- %d",i,j);
+                whitePixelThreshold++;
+            }
+            if(whitePixelThreshold == 250){
                 return false;
             }
         }
