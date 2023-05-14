@@ -383,7 +383,7 @@ bool rotateState = false;
 
 void rotateUntillLineInMiddle(cv::Point& point) {
 
-    cmd_vel.linear.x = -0.1;
+    cmd_vel.linear.x = 0;
     cmd_vel.angular.z = -2.0;
 
     ROS_INFO("%d-%d = %d", point.x, point.y, std::abs(point.x - 400));
@@ -431,7 +431,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
     ROS_INFO("obstacle area is %lld -- direct %d", obstacleArea, (obstacleDirection * static_cast<int>(350 * (obstacleArea / (double)(800 * 800)))));
 
     if (obstacleArea > 20000) {
-        point.x += (obstacleDirection * 100);
+        point.x += (obstacleDirection * 75);
 
     }
 
@@ -442,7 +442,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
     double dx = 400 - point.x;
     // int dy = point.y - 800;
 
-    double radian = std::atan(dx / 100);
+    double radian = std::atan(dx / 50);
 
     ROS_INFO("radian is %lf", radian);
 
@@ -465,12 +465,12 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
             // ROS_INFO_STREAM( "Average Hue: " << avg_hue[0] );
             // ROS_INFO_STREAM( "Average Saturation: " << avg_sat[0] );
             // ROS_INFO_STREAM( "Average Value: " << avg_val[0] );
-            cmd_vel.linear.x = 0.4;
+            cmd_vel.linear.x = 0.6;
             cmd_vel.angular.z = 0;
-            if (avg_hue[0] > 10 && avg_sat[0] > 10 && avg_val[0] > 10)
+            if (avg_hue[0] > 5 && avg_sat[0] > 5 && avg_val[0] > 5)
             {
                 i++;
-                if (i == 3) {
+                if (i == 2) {
                     rotateState = true;
                     i = 0;
                 }
