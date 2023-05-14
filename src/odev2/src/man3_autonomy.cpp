@@ -379,7 +379,7 @@ bool rotateState = false;
 
 void rotateUntillLineInMiddle(cv::Point& point) {
 
-    cmd_vel.linear.x = 0;
+    cmd_vel.linear.x = -0.1;
     cmd_vel.angular.z = -2.0;
 
     ROS_INFO("%d-%d = %d", point.x, point.y, std::abs(point.x - 400));
@@ -438,7 +438,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
     double dx = 400 - point.x;
     // int dy = point.y - 800;
 
-    double radian = std::atan(dx / 50);
+    double radian = std::atan(dx / 100);
 
     ROS_INFO("radian is %lf", radian);
 
@@ -461,12 +461,12 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
             // ROS_INFO_STREAM( "Average Hue: " << avg_hue[0] );
             // ROS_INFO_STREAM( "Average Saturation: " << avg_sat[0] );
             // ROS_INFO_STREAM( "Average Value: " << avg_val[0] );
-            cmd_vel.linear.x = 0.5;
+            cmd_vel.linear.x = 0.4;
             cmd_vel.angular.z = 0;
-            if (avg_hue[0] > 14.5 && avg_sat[0] > 14.5 && avg_val[0] > 14.7)
+            if (avg_hue[0] > 10 && avg_sat[0] > 10 && avg_val[0] > 10)
             {
                 i++;
-                if (i == 2) {
+                if (i == 3) {
                     rotateState = true;
                     i = 0;
                 }
@@ -475,7 +475,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
         }
         else {
             // //ROS_INFO("fuk");
-            cmd_vel.linear.x = 0.60;
+            cmd_vel.linear.x = 0.80;
             cmd_vel.angular.z = radian;
 
         }
