@@ -161,8 +161,8 @@ target_link_libraries(man3_autonomy
   ${OpenCV_LIBRARIES}
 )
 
-add_executable(trajectory src/trajectory.cpp)
-target_link_libraries(trajectory ${catkin_LIBRARIES})
+add_executable(trajectory2 src/trajectory.cpp)
+target_link_libraries(trajectory2 ${catkin_LIBRARIES})
 
 #############
 ## Install ##
