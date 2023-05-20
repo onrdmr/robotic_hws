@@ -155,8 +155,8 @@ include_directories(
 add_executable(man1_autonomy src/man1_autonomy.cpp)
 target_link_libraries(man1_autonomy ${catkin_LIBRARIES})
 
-# add_executable(trajectory src/trajectory.cpp)
-# target_link_libraries(trajectory ${catkin_LIBRARIES})
+add_executable(trajectory1 src/trajectory.cpp)
+target_link_libraries(trajectory1 ${catkin_LIBRARIES})
 
 #############
 ## Install ##
