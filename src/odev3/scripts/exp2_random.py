@@ -15,8 +15,10 @@ pose_args = "-x " + str(poses_x[pose_x_i]) + " -y " + str(poses_y[pose_y_i]) + "
 # time.sleep(3)
 # os.system("roslaunch p3at_description spawn_p3at.launch")
 
-sys.stderr.write("roslaunch p3at_description spawn_p3at.launch pose_args:=\"" + pose_args + "\"\n")
+command = "roslaunch p3at_description spawn_p3at.launch pose_args:=\"" + pose_args + "\"\n"
+
+sys.stderr.write(command)
 sys.stderr.flush()
 
 time.sleep(3)
-os.system("roslaunch p3at_description spawn_p3at.launch pose_args:=\"" + pose_args + "\"")
+os.system(command)

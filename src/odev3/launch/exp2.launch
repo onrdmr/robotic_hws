@@ -8,15 +8,17 @@
 
 	<node name="exp2_random" pkg="odev3" type="exp2_random.py"/>
 
-	<node name="exp2" pkg="odev3" type="exp2_autonomy"/>
+	<!-- <node name="exp2" pkg="odev3" type="exp2_autonomy"/>
+	<node name="gezinge" pkg="odev3" type="trajectory"/> -->
 
 	<node name="gezinge" pkg="odev3" type="trajectory"/>
 
-	<node pkg="tf" type="static_transform_publisher" name="world2trajectory" args="0 0 0 0 0 0 /map /trajectory 100"/>
+	<node pkg="tf" type="static_transform_publisher" name="world2trajectory" args="0 0 0 0 0 0 /robot1/base_link /map 100"/>
 
 	<!-- BU LAUNCH DOSYASINA BURDAN SONRA EKLEME YAPABILIRSINIZ -->
 
-	<!-- node pkg="tf" type="static_transform_publisher" name="world2odom" args="0 0 0 0 0 0 /world /rtg/odom 100"/ -->
+
+	<include file="$(find odev3)/launch/mapping.launch"/>
 
 	<!-- BURAYA KADAR -->	
 </launch>
