@@ -23,26 +23,38 @@ void laserCallBack(const sensor_msgs::LaserScan::ConstPtr& laser) {
     //BURDAN SONRASINI DEGISTIR
 
     // list of laser data that are evaluated in each cycle
-    constexpr int points[]{ 220, 260, 300, 340, 380, 420, 460, 500, 540, 580, 620, 660, 700, 740, 780, 820, 860 };
+    constexpr int points[]{  220, 240, 260, 280, 300, 320, 340,360, 380,400, 420, 440, 460,480, 500,520, 540,560, 580,600, 620,640 ,660,680 ,700,720, 740,760, 780, 800, 820,840, 860};
 
     // center of all points
     constexpr int center{ 540 };
 
     // gap between each point
-    constexpr int gap{ center - points[0] };
+    constexpr int gap{ points[1] - points[0] };
 
-    int maxPoint{ points[0] };
-    int minPoint{ points[0] };
+    constexpr int mgap{ center - points[0] };
+
+    int maxPoint{ center };
+    int minPoint{ center };
 
     double rightSum = 0;
     double leftSum = 0;
 
+    
+
     for (int point : points) {
+        if (laser->ranges[point] < 0.30) {
+            continue;
+        }
+
+
+
         if (laser->ranges[point] > laser->ranges[maxPoint]) {
             maxPoint = point;
         }
 
-        if (laser->ranges[point] > 0.20 && laser->ranges[point] < laser->ranges[minPoint]) {
+        
+
+        if ( laser->ranges[point] < laser->ranges[minPoint]) { // laser->ranges[point] > 0.20 &&
             minPoint = point;
         }
 
@@ -81,18 +93,28 @@ void laserCallBack(const sensor_msgs::LaserScan::ConstPtr& laser) {
     // else if (laser->ranges[center] > 100) {
     //     cmd_vel.linear.x = -0.30;
     // }
-    else if (laser->ranges[center] < 0.50 && laser->ranges[center - gap * 3] < 0.50 && laser->ranges[center + gap * 3] < 0.50) {
+    else if (laser->ranges[center] < 0.50 && laser->ranges[center - gap * 2] < 0.50 && laser->ranges[center + gap * 2] < 0.50) {
         ROS_ERROR("going back");
         cmd_vel.linear.x = -0.20;
         cmd_vel.angular.z = 2.00 * turnDirection;
     }
     else {
         ROS_ERROR("going forward");
+        if(std::abs(rightSum - leftSum) < 0.2 ){
+            ROS_ERROR("no angular");
+            cmd_vel.angular.z = 0;
+
+        }
+        else {
+            cmd_vel.angular.z = 1.50 * maxDirection;
+        }
+
         cmd_vel.linear.x = 0.40;
-        cmd_vel.angular.z = 1.50 * maxDirection;
+
 
         turnDirection = maxDirection;
         // * (0.3 + static_cast<double>(std::abs(center - maxPoint)) / gap);
+
 
         if (laser->ranges[minPoint] < threshold && maxDirection == minDirection) {
             ROS_ERROR("avoiding wall");
@@ -150,7 +172,7 @@ void laserCallBack(const sensor_msgs::LaserScan::ConstPtr& laser) {
     ROS_ERROR("linear: %lf", cmd_vel.linear.x);
     ROS_ERROR("angular: %lf", cmd_vel.angular.z);
     ROS_ERROR("max point: %lf", laser->ranges[maxPoint]);
-    ROS_ERROR("min point: %lf", laser->ranges[minPoint]);
+    ROS_ERROR("min point: %lf\n", laser->ranges[minPoint]);
 
     //BURDAN SONRASINA DOKUNMA
 
