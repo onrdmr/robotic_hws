@@ -74,14 +74,14 @@ void laserCallBack(const sensor_msgs::LaserScan::ConstPtr& laser) {
 
     static int turnDirection = 1;
 
-    if (laser->ranges[center] > 100) {
-        ROS_ERROR("looking in the air");
-        cmd_vel.linear.x = -0.30;
-    }
+    // if (laser->ranges[center] > 100) {
+    //     ROS_ERROR("looking in the air");
+    //     cmd_vel.linear.x = -0.30;
+    // }
     // else if (laser->ranges[center] > 100) {
     //     cmd_vel.linear.x = -0.30;
     // }
-    else if (laser->ranges[center] < 0.50 && laser->ranges[center - gap * 3] < 0.50 && laser->ranges[center + gap * 3] < 0.50) {
+    if (laser->ranges[center] < 0.50 && laser->ranges[center - gap * 3] < 0.50 && laser->ranges[center + gap * 3] < 0.50) {
         ROS_ERROR("going back");
         cmd_vel.linear.x = -0.20;
         cmd_vel.angular.z = 2.00 * turnDirection;

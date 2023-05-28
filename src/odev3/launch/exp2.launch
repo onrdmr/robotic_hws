@@ -16,9 +16,9 @@
 
 	<!-- BU LAUNCH DOSYASINA BURDAN SONRA EKLEME YAPABILIRSINIZ -->
 
+	<include file="$(find odev3)/launch/nav.launch"/>
 
-
-	<!-- <include file="$(find odev3)/launch/mapping.launch"/> -->
+	<include file="$(find odev3)/launch/mapping.launch"/>
 
 	<!-- node pkg="tf" type="static_transform_publisher" name="world2odom" args="0 0 0 0 0 0 /world /rtg/odom 100"/ -->
 
