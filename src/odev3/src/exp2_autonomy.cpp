@@ -46,8 +46,6 @@ void laserCallBack(const sensor_msgs::LaserScan::ConstPtr& laser) {
             continue;
         }
 
-
-
         if (laser->ranges[point] > laser->ranges[maxPoint]) {
             maxPoint = point;
         }
