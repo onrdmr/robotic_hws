@@ -94,7 +94,7 @@ void laserCallBack(const sensor_msgs::LaserScan::ConstPtr& laser) {
     else if (laser->ranges[center] < 0.50 && laser->ranges[center - gap * 2] < 0.50 && laser->ranges[center + gap * 2] < 0.50) {
         ROS_ERROR("going back");
         cmd_vel.linear.x = -0.20;
-        cmd_vel.angular.z = 2.00 * turnDirection;
+        cmd_vel.angular.z = -2.00 ;
     }
     else {
         ROS_ERROR("going forward");
