@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(odev3)
+project(proje)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
@@ -152,13 +152,8 @@ include_directories(
 #   ${catkin_LIBRARIES}
 # )
 
-
-# TODO : LOOK HERE <<FUTURE>> IF YOU NEED TO COMPILE THIS LAUNCH
-# add_executable(exp2_autonomy src/exp2_autonomy.cpp)
-# target_link_libraries(exp2_autonomy ${catkin_LIBRARIES})
-
-# add_executable(trajectory src/trajectory.cpp)
-# target_link_libraries(trajectory ${catkin_LIBRARIES})
+add_executable(trajectory src/trajectory.cpp)
+target_link_libraries(trajectory ${catkin_LIBRARIES})
 
 #############
 ## Install ##
