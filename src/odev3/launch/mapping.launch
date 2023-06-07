@@ -1,5 +1,5 @@
 <launch>
-    <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping">
+  <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping">
     <rosparam>
       odom_frame: /robot1/odom
       base_frame: /robot1/base_link
