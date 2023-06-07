@@ -8,6 +8,9 @@
 
   	<!-- <node name="gazebo_gui" pkg="gazebo_ros" type="gzclient"/> -->
 
+	<node name="proje" pkg="proje" type="project" output="screen"/>
+
+
 	<include file="$(find p3at_description)/launch/spawn_p3at.launch">
 		<arg name="robot_name" value="rtg"/>
 		<arg name="pose_args" value="-x -1.2 -y 0 -Y -1.57"/> 
