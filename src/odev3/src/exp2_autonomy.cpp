@@ -23,7 +23,7 @@ void laserCallBack(const sensor_msgs::LaserScan::ConstPtr& laser) {
     //BURDAN SONRASINI DEGISTIR
 
     // list of laser data that are evaluated in each cycle
-    constexpr int points[]{  220, 240, 260, 280, 300, 320, 340,360, 380,400, 420, 440, 460,480, 500,520, 540,560, 580,600, 620,640 ,660,680 ,700,720, 740,760, 780, 800, 820,840, 860};
+    constexpr int points[]{  220, 240, 260, 280, 300, 320, 340,360, 380,400, 420, 440, 460, 480, 500,520, 540, 560, 580, 600, 620, 640 ,660, 680 ,700, 720, 740, 760, 780, 800, 820, 840, 860};
 
     // center of all points
     constexpr int center{ 540 };
