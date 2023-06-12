@@ -154,11 +154,11 @@ include_directories(
 #   ${catkin_LIBRARIES}
 # )
 
-add_executable(project src/project.cpp)
-target_link_libraries(project 
-  ${catkin_LIBRARIES} 
-  ${OpenCV_LIBRARIES}
-)
+# add_executable(project src/project.cpp)
+# target_link_libraries(project 
+#   ${catkin_LIBRARIES} 
+#   ${OpenCV_LIBRARIES}
+# )
 
 add_executable(trajectory src/trajectory.cpp)
 target_link_libraries(trajectory ${catkin_LIBRARIES})

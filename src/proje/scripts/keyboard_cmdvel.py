@@ -5,6 +5,15 @@ import rospy
 from geometry_msgs.msg import Twist
 
 import sys, select, termios, tty
+# print("pyversion" , sys.version)
+
+
+## this two for camera callback
+from camera_callback import camera_callback, keyboard_callback
+from sensor_msgs.msg import Image
+from std_msgs.msg import String
+
+
 
 msg = """
 Reading from the keyboard  and Publishing to Twist!
@@ -76,10 +85,15 @@ def vels(speed,turn):
 	return "currently:\tspeed %s\tturn %s " % (speed,turn)
 
 if __name__=="__main__":
-	settings = termios.tcgetattr(sys.stdin)
-	
-	pub = rospy.Publisher('rtg/cmd_vel', Twist, queue_size = 1)
 	rospy.init_node('keyboard_cmdvel')
+	settings = termios.tcgetattr(sys.stdin)
+
+	modified_camera_pub = rospy.Publisher('/rtg/camera/rgb/modified_image', Image, queue_size = 10)
+
+	camera_sub = rospy.Subscriber('/rtg/camera/rgb/image_raw', Image, camera_callback, (modified_camera_pub))
+	pub = rospy.Publisher('/rtg/cmd_vel', Twist, queue_size = 1)
+	pub_key = rospy.Publisher('/rtg/key', String, queue_size = 10)
+	camera_sub = rospy.Subscriber('/rtg/key', String, keyboard_callback)
 
 	speed = rospy.get_param("~speed", 0.5)
 	turn = rospy.get_param("~turn", 1.0)
@@ -94,6 +108,8 @@ if __name__=="__main__":
 		print(vels(speed,turn))
 		while(1):
 			key = getKey()
+			pub_key.publish(key)
+				# this 
 			if key in moveBindings.keys():
 				x = moveBindings[key][0]
 				y = moveBindings[key][1]
