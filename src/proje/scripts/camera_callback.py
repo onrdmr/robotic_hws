@@ -61,7 +61,7 @@ def keyboard_callback(key_typed : String):
     global watch_key
     key = key_typed.data
     
-    if( key == '7' ):
+    if ( key == '7' ):
         watch_key = '7'
         print("key" + key)
         
@@ -69,19 +69,39 @@ def keyboard_callback(key_typed : String):
     elif ( key == '9'):
         watch_key = '9'
         print("key" + key)
-
+    
+    elif ( key == '5' ):
+        watch_key = '5'
+        print("key" + key)
 
     else:
         watch_key = None
         # print("key" + watch_key)
 
+def create_barrel_contour(rgb_image):
+    print("create barrel contour camera...")
+    # Convert camera data to RGB image
+    
+    # Apply Gaussian blur for HSV conversion
+    blurred_image = cv2.GaussianBlur(rgb_image, (5, 5), 0, 0)
 
+    # Convert RGB to HSV
+    hsv_image = cv2.cvtColor(blurred_image, cv2.COLOR_RGB2HSV)
+
+    # Create mask for red color
+    lower_red = np.array([110, 50, 50])
+    upper_red = np.array([130, 255, 255])
+    mask = cv2.inRange(hsv_image, lower_red, upper_red)
+    mask = 255 - mask
+    contour = create_contour(mask, 15)
+    
+    return contour
 
 def camera_callback(camera : Image, modified_image_pub ):
     
     global watch_key
 
-    if(watch_key == '9'):
+    if(watch_key == '9'): # ocr
         print("9 is clicked")
         bridge = CvBridge()
         # Convert the image message to OpenCV format
@@ -105,7 +125,74 @@ def camera_callback(camera : Image, modified_image_pub ):
         points = np.array([contour['lu'], contour['ru'], contour['rb'], contour['lb']])
 
         # Convert grayscale image to color
-        color_image = cv2.cvtColor(grayscale_image, cv2.COLOR_GRAY2BGR)
+        # color_image = cv2.cvtColor(grayscale_image, cv2.COLOR_GRAY2BGR)
+
+        cv2.polylines(rgb_image, [points], True, (0, 255, 0), 2)
+        # cv2.imshow("Result", rgb_image)
+        # cv2.waitKey(0)
+        # Convert the image back to sensor_msgs/Image format
+        arranged_image_msg = bridge.cv2_to_imgmsg(rgb_image, encoding='rgb8')
+        # camera.data = arranged_image_msg
+        modified_image_pub.publish(arranged_image_msg)
+        return
+    
+    elif(watch_key == '7'): # qr
+        print("7 is clicked")
+        bridge = CvBridge()
+        # Convert the image message to OpenCV format
+        cv_image = bridge.imgmsg_to_cv2(camera, desired_encoding='rgb8')
+
+        # Convert RGB image to BGR
+        bgr_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2BGR)
+
+        # Convert BGR image back to RGB
+        rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
+
+
+        kernel_size = 1
+        grayscale_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2GRAY)
+        kernel = grayscale_image[0:kernel_size, 0:kernel_size].copy()
+
+        # Perform convolution
+        result = cv2.filter2D(grayscale_image, -1, kernel)
+        contour = create_contour(result, 15)
+
+        points = np.array([contour['lu'], contour['ru'], contour['rb'], contour['lb']])
+
+        # Convert grayscale image to color
+        # color_image = cv2.cvtColor(grayscale_image, cv2.COLOR_GRAY2BGR)
+
+        cv2.polylines(rgb_image, [points], True, (0, 255, 0), 2)
+        # cv2.imshow("Result", rgb_image)
+        # cv2.waitKey(0)
+        # Convert the image back to sensor_msgs/Image format
+        arranged_image_msg = bridge.cv2_to_imgmsg(rgb_image, encoding='rgb8')
+        # camera.data = arranged_image_msg
+        modified_image_pub.publish(arranged_image_msg)
+        return
+
+    elif(watch_key == '5'): # qr
+        print("5 is clicked")
+        bridge = CvBridge()
+        # Convert the image message to OpenCV format
+        cv_image = bridge.imgmsg_to_cv2(camera, desired_encoding='rgb8')
+
+        # Convert RGB image to BGR
+        bgr_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2BGR)
+
+        # Convert BGR image back to RGB
+        rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
+
+
+        kernel_size = 1
+        grayscale_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2GRAY)
+        
+        contour = create_barrel_contour(rgb_image)
+
+        points = np.array([contour['lu'], contour['ru'], contour['rb'], contour['lb']])
+
+        # Convert grayscale image to color
+        # color_image = cv2.cvtColor(grayscale_image, cv2.COLOR_GRAY2BGR)
 
         cv2.polylines(rgb_image, [points], True, (0, 255, 0), 2)
         # cv2.imshow("Result", rgb_image)
