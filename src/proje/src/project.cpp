@@ -11,7 +11,7 @@
 void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
 {
     bool isLocked;
-    std::ifstream fileLock("/home/onur/robotic_hws/src/proje/file.lock");
+    std::ifstream fileLock("~/repos/robotic_hws/src/proje/file.lock");
     
     std::string boolString;
     fileLock >> boolString;
@@ -25,7 +25,7 @@ void cameraCallBack(const sensor_msgs::Image::ConstPtr& camera)
         // cv::QRCodeDetector qrDecoder = cv::QRCodeDetector::QRCodeDetector();
         
 
-        bool isSaved = cv::imwrite("/home/onur/robotic_hws/src/proje/onur.jpg", rgbImage);
+        bool isSaved = cv::imwrite("~/repos/robotic_hws/src/proje/onur.jpg", rgbImage);
         if( isSaved == false )
         {   
             ROS_INFO("Saving the image, FAILED\n\n" );

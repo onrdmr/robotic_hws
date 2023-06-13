@@ -75,7 +75,7 @@ int main(int argc , char * argv[])
 {
 
     // cv::Mat image = cv::imread("/home/onur/robotic_hws/src/proje/barcode_example1.jpg");
-    cv::Mat image = cv::imread("/home/onur/robotic_hws/src/proje/corrosive.jpg");
+    cv::Mat image = cv::imread("~/repos/robotic_hws/image.png");
     // cv::Mat image = cv::imread("/home/onur/robotic_hws/src/proje/littleSlandedQr2.jpg");
     // cv::Mat image = cv::imread("/home/onur/robotic_hws/src/proje/explosives.jpg");
 
