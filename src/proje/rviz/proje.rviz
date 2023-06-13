@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /Image1
         - /Map1
       Splitter Ratio: 0.5
     Tree Height: 385
@@ -54,14 +55,14 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /rtg/camera/rgb/image_raw
+      Image Topic: /rtg/camera/rgb/modified_image
       Max Value: 1
       Median window: 5
       Min Value: 0
       Name: Image
       Normalize Range: true
       Queue Size: 2
-      Transport Hint: compressed
+      Transport Hint: raw
       Unreliable: false
       Value: true
     - Alpha: 1
@@ -223,5 +224,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1853
-  X: 35
-  Y: -8
+  X: -32
+  Y: -32

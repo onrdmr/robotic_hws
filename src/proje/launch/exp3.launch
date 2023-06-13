@@ -7,6 +7,7 @@
 
     <!-- <node name="mapping" pkg="gmapping" type="slam_gmapping" name="slam_gmapping"/> -->
 
+
     <!-- <node name="gazebo_gui" pkg="gazebo_ros" type="gzclient"/> -->
 
     <!-- <node name="proje" pkg="proje" type="project" output="screen" /> -->

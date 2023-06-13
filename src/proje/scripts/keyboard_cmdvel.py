@@ -9,6 +9,17 @@ import roslib
 roslib.load_manifest('proje')
 
 
+import sys, select, termios, tty
+# print("pyversion" , sys.version)
+
+
+## this two for camera callback
+from camera_callback import camera_callback, keyboard_callback, map_callback
+from sensor_msgs.msg import Image
+from std_msgs.msg import String
+from nav_msgs.msg import OccupancyGrid
+
+
 msg = """
 Reading from the keyboard  and Publishing to Twist!
 ---------------------------
