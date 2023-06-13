@@ -67,13 +67,48 @@ def image_callback(msg):
         rospy.logerr(e)
 
 def main():
-    rospy.init_node('image_subscriber', anonymous=True)
+    # rospy.init_node('image_subscriber', anonymous=True)
     
-    # Set up the subscriber to the raw image topic
-    image_topic = "/rtg/camera/rgb/image_raw"  # Replace with the actual image topic
-    rospy.Subscriber(image_topic, Image, image_callback)
+    # # Set up the subscriber to the raw image topic
+    # image_topic = "/rtg/camera/rgb/image_raw"  # Replace with the actual image topic
+    # rospy.Subscriber(image_topic, Image, image_callback)
     
-    rospy.spin()
+    # rospy.spin()
+    image = cv2.imread("/home/onur/robotic_hws/src/proje/qr2.jpg")
+    # cv2.imshow("image3", image)
+    # cv2.waitKey(0)
+    
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # cv2.imshow("image3", gray)
+    # cv2.waitKey(3)
+
+    # Change brightness/contrast
+    # high_contrast = cv2.convertScaleAbs(gray, alpha=2, beta=10)
+   
+    # # Make binary image
+    # high_contrast[high_contrast > 40] = 255
+    # high_contrast[high_contrast <= 40] = 0
+
+    # cv2.imshow("image", high_contrast)
+    # cv2.waitKey(3)
+
+    # Convert the OpenCV image to PIL format
+    pil_image = PILImage.fromarray(gray)
+    # rospy.loginfo(pil_image.size)
+    pil_image.save('sugoma.png')
+
+    # Decode QR codes in the image
+    qr_codes = zbarlight.scan_codes(['qrcode'], pil_image)
+
+    # Iterate over detected QR codes
+    if qr_codes is not None:
+        rospy.loginfo('number of qr codes: {}'.format(len(qr_codes)))
+        for qr_code in qr_codes:
+            # Extract the QR code's data
+            qr_data = qr_code.decode('utf-8')
+            rospy.loginfo('QR Code detected: {}'.format(qr_data))
+
+
 
 if __name__ == '__main__':
     try:

@@ -140,7 +140,7 @@ def create_contour(image, cost):
 
 def main():
     # image_path = "qr-code.jpg"
-    image_path = "image.png"
+    image_path = "/home/onur/robotic_hws/src/proje/barcode_example1.jpg"
     image = cv2.imread(image_path)
 
     if image is None:
