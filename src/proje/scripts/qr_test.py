@@ -107,22 +107,22 @@ def tobinary(image):
 
 def decode_qr_code(image):
     # Convert the image to grayscale
-    # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    gray = image
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # gray = image
     cv2.imwrite("gray.png", gray)
 
     sharpened = sharpen_image(gray, 4)
     cv2.imwrite("sharpened.png", sharpened)
 
     # Change brightness/contrast
-    contrasted = cv2.convertScaleAbs(sharpened, alpha=2, beta=100)
+    contrasted = cv2.convertScaleAbs(sharpened, alpha=10, beta=-200)
     cv2.imwrite("contrasted.png", contrasted)
 
     binary = tobinary(contrasted)
     cv2.imwrite("binary.png", binary)
 
     # Apply Gaussian blur
-    blurred = cv2.GaussianBlur(binary, (0, 0), 1)
+    blurred = cv2.GaussianBlur(binary, (0, 0), 0.5)
     cv2.imwrite("blurred.png", blurred)
 
     result = tobinary(blurred)
@@ -130,7 +130,11 @@ def decode_qr_code(image):
     result = sharpen_image(result, 4)
     cv2.imwrite("result.png", result)
 
-    decode_pyzbar(result)
+    # Convert the grayscale image to RGB
+    rgb_image = cv2.cvtColor(result, cv2.COLOR_GRAY2RGB)
+    cv2.imwrite("result_rgb.png", rgb_image)
+
+    decode_qreader(rgb_image)
 
 
 def create_contour(image, cost):
@@ -177,11 +181,11 @@ def main():
     # Perform convolution
     result = cv2.filter2D(grayscale_image, -1, kernel)
 
-    # contour = create_contour(result, 30)
-    # cropped_image = image[contour['lu'][1]: contour['lb']
-    #                       [1], contour['lu'][0]: contour['ru'][0]]
-    
-    decode_qr_code(result)
+    contour = create_contour(result, 30)
+    cropped_image = image[contour['lu'][1]: contour['lb']
+                          [1], contour['lu'][0]: contour['ru'][0]]
+
+    decode_qr_code(cropped_image)
 
     # points = np.array([contour['lu'], contour['ru'], contour['rb'], contour['lb']])
 
