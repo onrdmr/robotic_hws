@@ -12,6 +12,9 @@
 import rospy
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
+from nav_msgs.msg import OccupancyGrid
+
+from text_recognition_ocr import ocr_recoginition
 
 from cv_bridge import CvBridge
 
@@ -22,7 +25,9 @@ import threading
 
 watch_key = None
 
+last_map_exist = [0,OccupancyGrid] 
 
+once_process = False
 
 def create_contour(image, cost):
     min_left, max_right, max_height, min_height = 65536, 0, 0, 65536
@@ -59,23 +64,29 @@ def create_contour(image, cost):
 # camera callback sees watch_key true and  
 def keyboard_callback(key_typed : String):
     global watch_key
+    global once_process
     key = key_typed.data
     
     if ( key == '7' ):
         watch_key = '7'
         print("key" + key)
+        once_process = True
         
 
     elif ( key == '9'):
         watch_key = '9'
         print("key" + key)
+        once_process = True
+
     
     elif ( key == '5' ):
         watch_key = '5'
         print("key" + key)
+        once_process = True
 
     else:
         watch_key = None
+        once_process = False
         # print("key" + watch_key)
 
 def create_barrel_contour(rgb_image):
@@ -97,12 +108,43 @@ def create_barrel_contour(rgb_image):
     
     return contour
 
+def map_callback(map : OccupancyGrid, modified_map_pub):
+
+
+    # if ( watch_key == '9' or watch_key == '7' or  watch_key == '5' ):
+    width = map.info.width
+    height = map.info.height
+    print("clicked and in map callback" + str(width) + "-" + str(height))
+    data = np.array(map.data).reshape((height, width))
+
+    # Convert occupancy grid to CV2 image
+    image = np.zeros((height, width, 3), dtype=np.uint8)
+    image[data == 0] = [255, 255, 255]  # Free space (white)
+    image[data == 100] = [0, 0, 0]      # Occupied space (black)
+    image[data == -1] = [127, 127, 127]  # Unknown space (gray)
+
+    scale_percent = 10
+
+    width = int(image.shape[1] * scale_percent / 100)
+    height = int(image.shape[0] * scale_percent / 100)
+
+    # Resize the image
+    resized_image = cv2.resize(image, (width, height))
+
+    # Display the image or perform other operations
+    # cv2.imshow("Occupancy Grid", image)
+    # cv2.waitKey(1)
+    print("publishing map")
+
+    modified_map_pub.publish(map)
+
 def camera_callback(camera : Image, modified_image_pub ):
     
     global watch_key
+    global once_process
 
     if(watch_key == '9'): # ocr
-        print("9 is clicked")
+        # print("9 is clicked")
         bridge = CvBridge()
         # Convert the image message to OpenCV format
         cv_image = bridge.imgmsg_to_cv2(camera, desired_encoding='rgb8')
@@ -112,6 +154,11 @@ def camera_callback(camera : Image, modified_image_pub ):
 
         # Convert BGR image back to RGB
         rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
+
+
+        my_thread = threading.Thread(target=ocr_recoginition, args=(rgb_image,))
+        my_thread.daemon = True
+        my_thread.start()
 
 
         kernel_size = 1
@@ -137,7 +184,7 @@ def camera_callback(camera : Image, modified_image_pub ):
         return
     
     elif(watch_key == '7'): # qr
-        print("7 is clicked")
+        # print("7 is clicked")
         bridge = CvBridge()
         # Convert the image message to OpenCV format
         cv_image = bridge.imgmsg_to_cv2(camera, desired_encoding='rgb8')
@@ -172,7 +219,7 @@ def camera_callback(camera : Image, modified_image_pub ):
         return
 
     elif(watch_key == '5'): # qr
-        print("5 is clicked")
+        # print("5 is clicked")
         bridge = CvBridge()
         # Convert the image message to OpenCV format
         cv_image = bridge.imgmsg_to_cv2(camera, desired_encoding='rgb8')
