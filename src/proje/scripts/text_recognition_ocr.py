@@ -2,32 +2,38 @@
 from google.cloud import vision
 
 import os
+import cv2
 
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/home/onur/robotic_hws/src/proje/scripts/vibrant-tiger-325510-ab7308715d5d.json'
 
 
-def detect_barcode(image_path):
-    client = vision.ImageAnnotatorClient()
+def ocr_recognition(rgb_image):
+    
+    print("doint once ocr recognition")
+    
+    # client = vision.ImageAnnotatorClient()
 
-    with open(image_path, 'rb') as image_file:
-        content = image_file.read()
+    # _, image_bytes = cv2.imencode('.jpg', image)
 
-    image = vision.Image(content=content)
+    # # Convert the bytes to content
+    # content = image_bytes.tobytes()
 
-    response = client.text_detection(image=image)
-    texts = response.text_annotation
+    # image = vision.Image(content=content)
 
-    for text in texts:
-        print(f'\n"{text.description}"')
+    # response = client.text_detection(image=image)
+    # texts = response.text_annotations
 
-        vertices = ([f'({vertex.x},{vertex.y})'
-                    for vertex in text.bounding_poly.vertices])
+    # for text in texts:
+    #     print(f'\n"{text.description}"')
 
-        print('bounds: {}'.format(','.join(vertices)))
+    #     vertices = ([f'({vertex.x},{vertex.y})'
+    #                 for vertex in text.bounding_poly.vertices])
+
+    #     print('bounds: {}'.format(','.join(vertices)))
 
 
-image_path = r'/mnt/d/yeni/Download/5.jpg'
-detect_barcode(image_path)
+# image_path = r'/home/onur/robotic_hws/src/proje/src/text_deneme.png'
+# detect_barcode(image_path)
 
 
 
