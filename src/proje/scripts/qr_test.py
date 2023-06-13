@@ -9,13 +9,61 @@ import zbarlight
 from PIL import Image as PILImage
 from pyzbar import pyzbar
 import numpy as np
+from qreader import QReader
 # import pytesseract
 
 
-def sharpen_image(image):
+def decode_qreader(image):
+    # Create a QReader instance
+    qreader = QReader()
+
+    # Use the detect_and_decode function to get the decoded QR data
+    decoded_text = qreader.detect_and_decode(image=image)
+    print(decoded_text)
+
+
+def decode_cv2(image):
+    detector = cv2.QRCodeDetector()
+    value, points, straight_qrcode = detector.detectAndDecode(image)
+    print(value)
+
+
+def decode_pyzbar(image):
+    # Detect QR codes in the image
+    barcodes = pyzbar.decode(image)
+    # rospy.loginfo('number of qr codes: {}'.format(len(barcodes)))
+
+    # Iterate over detected QR codes
+    for barcode in barcodes:
+        # Extract the QR code's data
+        qr_data = barcode.data.decode('utf-8')
+        print(qr_data)
+        # rospy.loginfo('QR Code detected: {}'.format(qr_data))
+
+
+def decode_zbarlight(image):
+    # Convert the OpenCV image to PIL format
+    pil_image = PILImage.fromarray(image)
+    pil_image.save('anan.png')
+    # rospy.loginfo(pil_image.size)
+
+    # Decode QR codes in the image
+    qr_codes = zbarlight.scan_codes(['qrcode'], pil_image)
+
+    # Iterate over detected QR codes
+    if qr_codes is not None:
+        # rospy.loginfo('number of qr codes: {}'.format(len(qr_codes)))
+        for qr_code in qr_codes:
+            # Extract the QR code's data
+            qr_data = qr_code.decode('utf-8')
+            print(qr_data)
+            # rospy.loginfo('QR Code detected: {}'.format(qr_data))
+
+
+def sharpen_image(image, iter):
     sharpened = image
 
-    for i in range(4):
+    for i in range(iter):
         # Apply Gaussian blur
         blurred = cv2.GaussianBlur(sharpened, (0, 0), 3)
         # cv2.imshow('blurred', blurred)
@@ -35,79 +83,54 @@ def sharpen_image(image):
     return sharpened
 
 
+def sharpen_image_kernel(image, iter):
+    sharpened = image
+
+    # Create a sharpening kernel
+    kernel = np.array([[-1, -1, -1],
+                       [-1,  9, -1],
+                       [-1, -1, -1]])
+    for i in range(iter):
+        # Apply the sharpening kernel to the image
+        sharpened = cv2.filter2D(sharpened, -1, kernel)
+
+    return sharpened
+
+
+def tobinary(image):
+    binary = image
+    # Make binary image
+    binary[binary > 210] = 255
+    binary[binary <= 210] = 0
+    return binary
+
+
 def decode_qr_code(image):
     # Convert the image to grayscale
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray = image
+    cv2.imwrite("gray.png", gray)
 
-    sharpened = sharpen_image(gray)
+    sharpened = sharpen_image(gray, 4)
+    cv2.imwrite("sharpened.png", sharpened)
 
     # Change brightness/contrast
-    contrasted = cv2.convertScaleAbs(sharpened, alpha=2.5, beta=-20)
+    contrasted = cv2.convertScaleAbs(sharpened, alpha=2, beta=100)
+    cv2.imwrite("contrasted.png", contrasted)
 
-    result = contrasted
+    binary = tobinary(contrasted)
+    cv2.imwrite("binary.png", binary)
 
-    # # Make binary image
-    # result[result > 200] = 255
-    # result[result <= 200] = 0
+    # Apply Gaussian blur
+    blurred = cv2.GaussianBlur(binary, (0, 0), 1)
+    cv2.imwrite("blurred.png", blurred)
 
-    # kernel_size = 1
-    # kernel = high_contrast[0:kernel_size, 0:kernel_size].copy()
+    result = tobinary(blurred)
 
-    # # Perform convolution
-    # result = cv2.filter2D(high_contrast, 0, kernel)
-
-    # # Create a sharpening kernel
-    # kernel = np.array([[-1, -1, -1],
-    #                    [-1,  9, -1],
-    #                    [-1, -1, -1]])
-    # for i in range(100):
-    #     # Apply the sharpening kernel to the image
-    #     sharpened_image = cv2.filter2D(sharpened_image, -1, kernel)
-
-    # detector = cv2.QRCodeDetector()
-    # value, points, straight_qrcode = detector.detectAndDecode(result)
-    # print(value)
-
-    # Convert the OpenCV image to PIL format
-    # pil_image = PILImage.fromarray(result)
-    # pil_image.save('anan.png')
-    # # rospy.loginfo(pil_image.size)
-
-    # # Decode QR codes in the image
-    # qr_codes = zbarlight.scan_codes(['qrcode'], pil_image)
-
-    # # Iterate over detected QR codes
-    # if qr_codes is not None:
-    #     # rospy.loginfo('number of qr codes: {}'.format(len(qr_codes)))
-    #     for qr_code in qr_codes:
-    #         # Extract the QR code's data
-    #         qr_data = qr_code.decode('utf-8')
-    #         print(qr_data)
-    #         # rospy.loginfo('QR Code detected: {}'.format(qr_data))
-
-    # Detect QR codes in the image
-    barcodes = pyzbar.decode(result)
-    # rospy.loginfo('number of qr codes: {}'.format(len(barcodes)))
-
-    # Iterate over detected QR codes
-    for barcode in barcodes:
-        # Extract the QR code's data
-        qr_data = barcode.data.decode('utf-8')
-        print(qr_data)
-        # rospy.loginfo('QR Code detected: {}'.format(qr_data))
-
-    cv2.imshow("gray", gray)
-    cv2.imshow("contrasted", contrasted)
-    cv2.imshow("sharpened", sharpened)
+    result = sharpen_image(result, 4)
     cv2.imwrite("result.png", result)
-    # cv2.imshow("result", result)
 
-# def main():
-#     img = cv2.imread("image.png", cv2.IMREAD_COLOR)
-#     decode_qr_code(img)
-
-# if __name__ == '__main__':
-#     main()
+    decode_pyzbar(result)
 
 
 def create_contour(image, cost):
@@ -140,7 +163,7 @@ def create_contour(image, cost):
 
 def main():
     # image_path = "qr-code.jpg"
-    image_path = "image.png"
+    image_path = "qr-test.png"
     image = cv2.imread(image_path)
 
     if image is None:
@@ -153,11 +176,12 @@ def main():
 
     # Perform convolution
     result = cv2.filter2D(grayscale_image, -1, kernel)
-    contour = create_contour(result, 30)
 
-    cropped_image = image[contour['lu'][1]: contour['lb']
-                          [1], contour['lu'][0]: contour['ru'][0]]
-    decode_qr_code(cropped_image)
+    # contour = create_contour(result, 30)
+    # cropped_image = image[contour['lu'][1]: contour['lb']
+    #                       [1], contour['lu'][0]: contour['ru'][0]]
+    
+    decode_qr_code(result)
 
     # points = np.array([contour['lu'], contour['ru'], contour['rb'], contour['lb']])
 
