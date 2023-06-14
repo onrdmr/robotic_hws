@@ -14,7 +14,7 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import String
 from nav_msgs.msg import OccupancyGrid
 
-from text_recognition_ocr import ocr_recoginition
+from text_recognition_ocr import ocr_recognition
 
 from cv_bridge import CvBridge
 
@@ -67,24 +67,29 @@ def keyboard_callback(key_typed : String):
     global once_process
     key = key_typed.data
     
-    if ( key == '7' ):
+    if ( key == '7' ): # qr
         watch_key = '7'
         print("key" + key)
         once_process = True
         
 
-    elif ( key == '9'):
+    elif ( key == '9'): # ocr
         watch_key = '9'
         print("key" + key)
         once_process = True
 
     
-    elif ( key == '5' ):
+    elif ( key == '5' ): # barrel
         watch_key = '5'
         print("key" + key)
         once_process = True
 
-    else:
+    elif ( key == '0'):
+        watch_key = '0'
+        print("key")
+        once_process = True
+
+    else: #barrel
         watch_key = None
         once_process = False
         # print("key" + watch_key)
@@ -108,13 +113,16 @@ def create_barrel_contour(rgb_image):
     
     return contour
 
-def map_callback(map : OccupancyGrid, modified_map_pub):
 
+
+def map_callback(map : OccupancyGrid, modified_map_pub):
+    global once_process
+    # if()
 
     # if ( watch_key == '9' or watch_key == '7' or  watch_key == '5' ):
     width = map.info.width
     height = map.info.height
-    print("clicked and in map callback" + str(width) + "-" + str(height))
+    print("clicked and in map callback -- " + str(width) + "-" + str(height))
     data = np.array(map.data).reshape((height, width))
 
     # Convert occupancy grid to CV2 image
@@ -123,20 +131,24 @@ def map_callback(map : OccupancyGrid, modified_map_pub):
     image[data == 100] = [0, 0, 0]      # Occupied space (black)
     image[data == -1] = [127, 127, 127]  # Unknown space (gray)
 
-    scale_percent = 10
+    # scale_percent = 10
 
-    width = int(image.shape[1] * scale_percent / 100)
-    height = int(image.shape[0] * scale_percent / 100)
+    # width = int(image.shape[1] * scale_percent / 100)
+    # height = int(image.shape[0] * scale_percent / 100)
 
-    # Resize the image
-    resized_image = cv2.resize(image, (width, height))
+    # # Resize the image
+    # resized_image = cv2.resize(image, (width, height))
 
     # Display the image or perform other operations
-    # cv2.imshow("Occupancy Grid", image)
-    # cv2.waitKey(1)
-    print("publishing map")
+    cv2.imshow("Occupancy Grid", image)
+    print("publishing map" + str(map.data[1]) )
+    cv2.waitKey(1)
 
     modified_map_pub.publish(map)
+
+## trajectory callback is written here
+# def trajectory_callback(trajectory):
+
 
 def camera_callback(camera : Image, modified_image_pub ):
     
@@ -155,10 +167,11 @@ def camera_callback(camera : Image, modified_image_pub ):
         # Convert BGR image back to RGB
         rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
 
-
-        my_thread = threading.Thread(target=ocr_recoginition, args=(rgb_image,))
-        my_thread.daemon = True
-        my_thread.start()
+        if(once_process == True):
+            my_thread = threading.Thread(target=ocr_recognition, args=(rgb_image,))
+            my_thread.daemon = True
+            my_thread.start()
+            once_process = False
 
 
         kernel_size = 1
@@ -196,6 +209,17 @@ def camera_callback(camera : Image, modified_image_pub ):
         rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
 
 
+        if(once_process == True):
+            # write 1 to file lock
+            print("write lock 0")
+
+            lock = open('/home/onur/robotic_hws/src/proje/scripts/file_qr.lock','w')
+            lock.seek(0)
+            cv2.imwrite("/home/onur/robotic_hws/src/proje/scripts/rgb_location.png",rgb_image)
+            lock.write("0")
+            lock.close()
+            once_process = False
+
         kernel_size = 1
         grayscale_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2GRAY)
         kernel = grayscale_image[0:kernel_size, 0:kernel_size].copy()
@@ -230,6 +254,12 @@ def camera_callback(camera : Image, modified_image_pub ):
         # Convert BGR image back to RGB
         rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
 
+        if ( once_process == True):
+            for i in range(100):
+                print("cylinder")
+
+            once_process = False
+
 
         kernel_size = 1
         grayscale_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2GRAY)
@@ -249,7 +279,7 @@ def camera_callback(camera : Image, modified_image_pub ):
         # camera.data = arranged_image_msg
         modified_image_pub.publish(arranged_image_msg)
         return
-
+    
     # print("publish")
     modified_image_pub.publish(camera)
 

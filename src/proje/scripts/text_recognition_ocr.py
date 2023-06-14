@@ -7,6 +7,10 @@ import cv2
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/home/onur/robotic_hws/src/proje/scripts/vibrant-tiger-325510-ab7308715d5d.json'
 
 
+from google.cloud import vision
+
+
+
 def ocr_recognition(rgb_image):
     
     print("doint once ocr recognition")

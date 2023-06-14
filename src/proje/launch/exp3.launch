@@ -9,6 +9,7 @@
 
 
     <!-- <node name="gazebo_gui" pkg="gazebo_ros" type="gzclient"/> -->
+    
 
     <!-- <node name="proje" pkg="proje" type="project" output="screen" /> -->
 
@@ -32,6 +33,10 @@
         <rosparam>
             odom_frame: /rtg/odom
             base_frame: /rtg/base_link
+            /slam_gmapping/xmax: 25.0
+            /slam_gmapping/xmin: -25.0
+            /slam_gmapping/ymax: 25.0
+            /slam_gmapping/ymin: -25.0
         </rosparam>
         <remap from="scan" to="/rtg/hokuyo" />
     </node>

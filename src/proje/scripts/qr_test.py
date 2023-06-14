@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+
 import rospy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
@@ -9,17 +10,80 @@ import zbarlight
 from PIL import Image as PILImage
 from pyzbar import pyzbar
 import numpy as np
-from qreader import QReader
+
+# Specify the target directory where the packages are installed
+
 # import pytesseract
 
+
+def qr_recognition(image_path):
+    # image_path = "qr-code.jpg"
+    # image_path = "qr-test.png"
+    # image = cv2.imread(image_path)
+    # Create a QReader instance
+    import sys
+
+    for i in range(100):
+        print("importing qreader...")
+
+
+    target_directory = '/mnt/d/qreader'
+
+    # Add the target directory to sys.path
+    sys.path.append(target_directory)
+    from qreader import QReader
+
+    for i in range(100):
+        print("imported qrreader...")
+    
+    lock = open("/home/onur/robotic_hws/src/proje/scripts/file_qr.lock", 'r')
+    lock.seek(0)
+    lock_value = int(lock.readline().strip())
+
+    while(lock_value >= 0):
+        print("inside qr")
+        print("lock is "+ str(lock_value))
+
+        image = cv2.read(image_path)
+
+        if(lock_value == '0'): # no lock
+
+            print("qr recognition doing")
+            if image is None:
+                print("Failed to load image!")
+                return
+
+            kernel_size = 1
+            grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            kernel = grayscale_image[0:kernel_size, 0:kernel_size].copy()
+
+            # Perform convolution
+            result = cv2.filter2D(grayscale_image, -1, kernel)
+
+            contour = create_contour(result, 30)
+            cropped_image = image[contour['lu'][1]: contour['lb']
+                                [1], contour['lu'][0]: contour['ru'][0]]
+
+            decode_qr_code(cropped_image)
+
+        lock.close()
+        lock.seek(0)
+        lock = open("/home/onur/robotic_hws/src/proje/scripts/file_qr.lock", 'r')
+        lock_value = int(lock.readline().strip())
+
+    print("finished :" + str(lock_value))
 
 def decode_qreader(image):
     # Create a QReader instance
     qreader = QReader()
+    for i in range(100):
+        print("decoding..." + decoded_text)
 
     # Use the detect_and_decode function to get the decoded QR data
     decoded_text = qreader.detect_and_decode(image=image)
-    print(decoded_text)
+    i = 0
+    for i in range(100):
+        print("decoded : text " + decoded_text)
 
 
 def decode_cv2(image):
@@ -165,57 +229,57 @@ def create_contour(image, cost):
     return contour
 
 
-def main():
-    # image_path = "qr-code.jpg"
-    image_path = "qr-test.png"
-    image = cv2.imread(image_path)
+# def qr_recognition(image):
+#     # image_path = "qr-code.jpg"
+#     # image_path = "qr-test.png"
+#     # image = cv2.imread(image_path)
+#     print("qr recognition doing")
+#     if image is None:
+#         print("Failed to load image!")
+#         return
 
-    if image is None:
-        print("Failed to load image!")
-        return
+#     kernel_size = 1
+#     grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+#     kernel = grayscale_image[0:kernel_size, 0:kernel_size].copy()
 
-    kernel_size = 1
-    grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    kernel = grayscale_image[0:kernel_size, 0:kernel_size].copy()
+#     # Perform convolution
+#     result = cv2.filter2D(grayscale_image, -1, kernel)
 
-    # Perform convolution
-    result = cv2.filter2D(grayscale_image, -1, kernel)
+#     contour = create_contour(result, 30)
+#     cropped_image = image[contour['lu'][1]: contour['lb']
+#                           [1], contour['lu'][0]: contour['ru'][0]]
 
-    contour = create_contour(result, 30)
-    cropped_image = image[contour['lu'][1]: contour['lb']
-                          [1], contour['lu'][0]: contour['ru'][0]]
+#     decode_qr_code(cropped_image)
 
-    decode_qr_code(cropped_image)
+#     # points = np.array([contour['lu'], contour['ru'], contour['rb'], contour['lb']])
 
-    # points = np.array([contour['lu'], contour['ru'], contour['rb'], contour['lb']])
+#     # # Convert grayscale image to color
+#     # color_image = cv2.cvtColor(grayscale_image, cv2.COLOR_GRAY2BGR)
 
-    # # Convert grayscale image to color
-    # color_image = cv2.cvtColor(grayscale_image, cv2.COLOR_GRAY2BGR)
+#     # # Draw polylines on the color image
+#     # cv2.polylines(grayscale_image, [points], True, (0, 255, 0), 2)
 
-    # # Draw polylines on the color image
-    # cv2.polylines(grayscale_image, [points], True, (0, 255, 0), 2)
+#     # roi_rect = cv2.boundingRect(points)
+#     # cropped_image = grayscale_image[roi_rect[1]:roi_rect[1] + roi_rect[3], roi_rect[0]:roi_rect[0] + roi_rect[2]]
+#     # cropped_image = cv2.bitwise_not(cropped_image)
 
-    # roi_rect = cv2.boundingRect(points)
-    # cropped_image = grayscale_image[roi_rect[1]:roi_rect[1] + roi_rect[3], roi_rect[0]:roi_rect[0] + roi_rect[2]]
-    # cropped_image = cv2.bitwise_not(cropped_image)
+#     # tessdata_path = "/usr/share/tesseract-ocr/4.00/tessdata/"
+#     # pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
+#     # tessdata_config = f"--tessdata-dir {tessdata_path}"
+#     # text = pytesseract.image_to_string(cropped_image, config=tessdata_config)
 
-    # tessdata_path = "/usr/share/tesseract-ocr/4.00/tessdata/"
-    # pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
-    # tessdata_config = f"--tessdata-dir {tessdata_path}"
-    # text = pytesseract.image_to_string(cropped_image, config=tessdata_config)
+#     # print("Recognized Text:\n", text)
 
-    # print("Recognized Text:\n", text)
+#     # cv2.imshow("Cropped Image", cropped_image)
+#     # cv2.imwrite("/home/onur/robotic_hws/src/proje/src/Cropped_Image.jpg", cropped_image)
 
-    # cv2.imshow("Cropped Image", cropped_image)
-    # cv2.imwrite("/home/onur/robotic_hws/src/proje/src/Cropped_Image.jpg", cropped_image)
+#     # cv2.imshow("Grayscale Image", grayscale_image)
+#     # cv2.imshow("Result", result)
+#     # cv2.imshow("cropped image", cropped_image)
 
-    # cv2.imshow("Grayscale Image", grayscale_image)
-    # cv2.imshow("Result", result)
-    # cv2.imshow("cropped image", cropped_image)
+#     cv2.waitKey(0)
 
-    cv2.waitKey(0)
-
-    cv2.destroyAllWindows()
+#     cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
