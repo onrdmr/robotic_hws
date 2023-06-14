@@ -12,9 +12,10 @@
 import rospy
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
-from nav_msgs.msg import OccupancyGrid
+from nav_msgs.msg import OccupancyGrid, Odometry
 
 from text_recognition_ocr import ocr_recognition
+from visualization_msgs.msg import Marker
 
 from cv_bridge import CvBridge
 
@@ -28,6 +29,8 @@ watch_key = None
 last_map_exist = [0,OccupancyGrid] 
 
 once_process = False
+markers = []
+
 
 def create_contour(image, cost):
     min_left, max_right, max_height, min_height = 65536, 0, 0, 65536
@@ -86,7 +89,7 @@ def keyboard_callback(key_typed : String):
 
     elif ( key == '0'):
         watch_key = '0'
-        print("key")
+        print("key" + key)
         once_process = True
 
     else: #barrel
@@ -115,40 +118,35 @@ def create_barrel_contour(rgb_image):
 
 
 
-def map_callback(map : OccupancyGrid, modified_map_pub):
-    global once_process
-    # if()
-
-    # if ( watch_key == '9' or watch_key == '7' or  watch_key == '5' ):
-    width = map.info.width
-    height = map.info.height
-    print("clicked and in map callback -- " + str(width) + "-" + str(height))
-    data = np.array(map.data).reshape((height, width))
-
-    # Convert occupancy grid to CV2 image
-    image = np.zeros((height, width, 3), dtype=np.uint8)
-    image[data == 0] = [255, 255, 255]  # Free space (white)
-    image[data == 100] = [0, 0, 0]      # Occupied space (black)
-    image[data == -1] = [127, 127, 127]  # Unknown space (gray)
-
-    # scale_percent = 10
-
-    # width = int(image.shape[1] * scale_percent / 100)
-    # height = int(image.shape[0] * scale_percent / 100)
-
-    # # Resize the image
-    # resized_image = cv2.resize(image, (width, height))
-
-    # Display the image or perform other operations
-    cv2.imshow("Occupancy Grid", image)
-    print("publishing map" + str(map.data[1]) )
-    cv2.waitKey(1)
-
-    modified_map_pub.publish(map)
-
 ## trajectory callback is written here
-# def trajectory_callback(trajectory):
+def trajectory_callback(trajectory:Odometry, object_trace_publisher):
+    global once_process
+    global watch_key
+    global markers
+    # print("tranjectory callback")
+    if( watch_key == '0' and once_process ):
+        print("signing on map")
+        marker = Marker()
+        marker.header.frame_id = "map"
+        marker.type = Marker.SPHERE
+        marker.pose.position.x = trajectory.pose.pose.position.x
+        marker.pose.position.y = trajectory.pose.pose.position.y
+        marker.pose.position.z = trajectory.pose.pose.position.z
+        marker.pose.orientation.w = trajectory.pose.pose.orientation.w
+        marker.scale.x = 0.2
+        marker.scale.y = 0.2
+        marker.scale.z = 0.2
+        marker.color.r = 1.0
+        marker.color.g = 0.0
+        marker.color.b = 0.0
+        marker.color.a = 1.0
 
+        markers.append(marker)
+        once_process = False
+
+    for marker in markers:
+        object_trace_publisher.publish(marker)
+    # object_trace_publisher(trajectory)
 
 def camera_callback(camera : Image, modified_image_pub ):
     
@@ -280,6 +278,7 @@ def camera_callback(camera : Image, modified_image_pub ):
         modified_image_pub.publish(arranged_image_msg)
         return
     
+
     # print("publish")
     modified_image_pub.publish(camera)
 

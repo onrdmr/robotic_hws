@@ -41,10 +41,10 @@ def qr_recognition(image_path):
     lock_value = int(lock.readline().strip())
 
     while(lock_value >= 0):
-        print("inside qr")
-        print("lock is "+ str(lock_value))
+        # print("inside qr")
+        # print("lock is "+ str(lock_value))
 
-        image = cv2.read(image_path)
+        image = cv2.imread(image_path)
 
         if(lock_value == '0'): # no lock
 
@@ -66,7 +66,7 @@ def qr_recognition(image_path):
 
             decode_qr_code(cropped_image)
 
-        lock.close()
+        # lock.close()
         lock.seek(0)
         lock = open("/home/onur/robotic_hws/src/proje/scripts/file_qr.lock", 'r')
         lock_value = int(lock.readline().strip())

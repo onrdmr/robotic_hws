@@ -15,25 +15,26 @@ def ocr_recognition(rgb_image):
     
     print("doint once ocr recognition")
     
-    # client = vision.ImageAnnotatorClient()
+    client = vision.ImageAnnotatorClient()
 
-    # _, image_bytes = cv2.imencode('.jpg', image)
+    _, image_bytes = cv2.imencode('.jpg', rgb_image)
 
-    # # Convert the bytes to content
-    # content = image_bytes.tobytes()
+    # Convert the bytes to content
+    content = image_bytes.tobytes()
 
-    # image = vision.Image(content=content)
+    image = vision.Image(content=content)
 
-    # response = client.text_detection(image=image)
-    # texts = response.text_annotations
+    response = client.text_detection(image=image)
+    texts = response.text_annotations
 
-    # for text in texts:
-    #     print(f'\n"{text.description}"')
+    for text in texts:
+        for i in range (10):
+            print(f'\n"{text.description}"')
 
-    #     vertices = ([f'({vertex.x},{vertex.y})'
-    #                 for vertex in text.bounding_poly.vertices])
+        # vertices = ([f'({vertex.x},{vertex.y})'
+        #             for vertex in text.bounding_poly.vertices])
 
-    #     print('bounds: {}'.format(','.join(vertices)))
+        # print('bounds: {}'.format(','.join(vertices)))
 
 
 # image_path = r'/home/onur/robotic_hws/src/proje/src/text_deneme.png'

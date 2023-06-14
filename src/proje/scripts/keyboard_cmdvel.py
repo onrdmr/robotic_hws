@@ -9,10 +9,11 @@ import sys, select, termios, tty
 
 
 ## this two for camera callback
-from camera_callback import camera_callback, keyboard_callback, map_callback
+from camera_callback import camera_callback, keyboard_callback, trajectory_callback
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
-from nav_msgs.msg import OccupancyGrid
+from nav_msgs.msg import OccupancyGrid, Odometry
+from visualization_msgs.msg import Marker
 
 import threading
 
@@ -92,14 +93,14 @@ if __name__=="__main__":
 	settings = termios.tcgetattr(sys.stdin)
 
 	modified_camera_pub = rospy.Publisher('/rtg/camera/rgb/modified_image', Image, queue_size = 1)
-	modified_map_pub = rospy.Publisher('/modified_map', OccupancyGrid, queue_size = 1)
+	object_trace_publisher = rospy.Publisher('/object_trace_publisher', Marker, queue_size = 1)
 
 	rospy.Subscriber('/rtg/camera/rgb/image_raw', Image, camera_callback, (modified_camera_pub))
 	pub = rospy.Publisher('/rtg/cmd_vel', Twist, queue_size = 1)
 	pub_key = rospy.Publisher('/rtg/key', String, queue_size = 10)
 	rospy.Subscriber('/rtg/key', String, keyboard_callback)
 
-	rospy.Subscriber('/map', OccupancyGrid, map_callback, (modified_map_pub))
+	rospy.Subscriber('//rtg/odom', Odometry, trajectory_callback, (object_trace_publisher))
 
 	## QR thread listens lock_qr
 	my_thread = threading.Thread(target=qr_recognition, args=("/home/onur/robotic_hws/src/proje/scripts/rgb_location.png",))
