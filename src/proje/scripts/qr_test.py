@@ -67,8 +67,8 @@ def qr_recognition(image_path):
             decode_qr_code(cropped_image)
 
         # lock.close()
+        # lock = open("/home/onur/robotic_hws/src/proje/scripts/file_qr.lock", 'r')
         lock.seek(0)
-        lock = open("/home/onur/robotic_hws/src/proje/scripts/file_qr.lock", 'r')
         lock_value = int(lock.readline().strip())
 
     print("finished :" + str(lock_value))

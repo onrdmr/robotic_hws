@@ -123,16 +123,20 @@ def trajectory_callback(trajectory:Odometry, object_trace_publisher):
     global once_process
     global watch_key
     global markers
+    
     # print("tranjectory callback")
     if( watch_key == '0' and once_process ):
         print("signing on map")
         marker = Marker()
         marker.header.frame_id = "map"
-        marker.type = Marker.SPHERE
+        marker.type = Marker.POINTS
+        marker.action = Marker.ADD
         marker.pose.position.x = trajectory.pose.pose.position.x
         marker.pose.position.y = trajectory.pose.pose.position.y
         marker.pose.position.z = trajectory.pose.pose.position.z
         marker.pose.orientation.w = trajectory.pose.pose.orientation.w
+
+        markers.append(marker)
         marker.scale.x = 0.2
         marker.scale.y = 0.2
         marker.scale.z = 0.2
@@ -141,11 +145,27 @@ def trajectory_callback(trajectory:Odometry, object_trace_publisher):
         marker.color.b = 0.0
         marker.color.a = 1.0
 
-        markers.append(marker)
         once_process = False
+        
 
+    dmarker = Marker()
+    dmarker.header.frame_id = "map"
+    dmarker.type = Marker.POINTS
+    dmarker.action = Marker.ADD
+    dmarker.scale.x = 0.2
+    dmarker.scale.y = 0.2
+    dmarker.scale.z = 0.2
+    dmarker.color.r = 1.0
+    dmarker.color.g = 0.0
+    dmarker.color.b = 0.0
+    dmarker.color.a = 1.0
     for marker in markers:
-        object_trace_publisher.publish(marker)
+
+        dmarker.points.append(marker.pose.position)
+        if(markers[-1] == marker):
+            object_trace_publisher.publish(dmarker)
+
+    
     # object_trace_publisher(trajectory)
 
 def camera_callback(camera : Image, modified_image_pub ):
