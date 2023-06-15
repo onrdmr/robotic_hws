@@ -5,6 +5,19 @@ import rospy
 from geometry_msgs.msg import Twist
 
 import sys, select, termios, tty
+# print("pyversion" , sys.version)
+
+
+## this two for camera callback
+from camera_callback import camera_callback, keyboard_callback, trajectory_callback
+from sensor_msgs.msg import Image
+from std_msgs.msg import String
+from nav_msgs.msg import OccupancyGrid, Odometry
+from visualization_msgs.msg import Marker
+
+import threading
+
+from qr_test import qr_recognition
 
 msg = """
 Reading from the keyboard  and Publishing to Twist!
@@ -76,10 +89,24 @@ def vels(speed,turn):
 	return "currently:\tspeed %s\tturn %s " % (speed,turn)
 
 if __name__=="__main__":
-	settings = termios.tcgetattr(sys.stdin)
-	
-	pub = rospy.Publisher('rtg/cmd_vel', Twist, queue_size = 1)
 	rospy.init_node('keyboard_cmdvel')
+	settings = termios.tcgetattr(sys.stdin)
+
+	modified_camera_pub = rospy.Publisher('/rtg/camera/rgb/modified_image', Image, queue_size = 1)
+	object_trace_publisher = rospy.Publisher('/object_trace_publisher', Marker, queue_size = 1)
+
+	rospy.Subscriber('/rtg/camera/rgb/image_raw', Image, camera_callback, (modified_camera_pub))
+	pub = rospy.Publisher('/rtg/cmd_vel', Twist, queue_size = 1)
+	pub_key = rospy.Publisher('/rtg/key', String, queue_size = 10)
+	rospy.Subscriber('/rtg/key', String, keyboard_callback)
+
+	rospy.Subscriber('//rtg/odom', Odometry, trajectory_callback, (object_trace_publisher))
+
+	## QR thread listens lock_qr
+	my_thread = threading.Thread(target=qr_recognition, args=("/home/onur/robotic_hws/src/proje/scripts/rgb_location.png",))
+	my_thread.daemon = True
+	my_thread.start()
+
 
 	speed = rospy.get_param("~speed", 0.5)
 	turn = rospy.get_param("~turn", 1.0)
@@ -94,6 +121,8 @@ if __name__=="__main__":
 		print(vels(speed,turn))
 		while(1):
 			key = getKey()
+			pub_key.publish(key)
+				# this 
 			if key in moveBindings.keys():
 				x = moveBindings[key][0]
 				y = moveBindings[key][1]
@@ -121,9 +150,13 @@ if __name__=="__main__":
 			pub.publish(twist)
 
 	except:
-		print(e)
+		# lock = open("file_qr.lock", 'w')
+		# lock.write("-1")
+		print("error")
 
 	finally:
+		# lock = open("file_qr.lock", 'w')
+		# lock.write("-1")
 		twist = Twist()
 		twist.linear.x = 0; twist.linear.y = 0; twist.linear.z = 0
 		twist.angular.x = 0; twist.angular.y = 0; twist.angular.z = 0
