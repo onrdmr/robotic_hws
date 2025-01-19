@@ -1,5 +1,5 @@
 # robotic_hws
-Robotic ödev
+YTU CE 2023 Robotik Teknolojileri Giriş Dersi Ödevleri
 
 # RVIZ GUI
 ## Detection of Cyclinder
